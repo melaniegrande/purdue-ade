@@ -72,18 +72,30 @@ spfail_modes = [1,1,1,1];
 %(0 = no panels on one side operational)
 
 %Data Parameters
-pull_time=15*60; %seconds,time we are pulling data around periapsis with the IMU
-picDelta=16000000/2; %913408;%bits,Amount of data we are gathering from each apoapsis picture session
-imuPull =352; %bits/pull,Amount of data we are gathering per data pull (Max Case)
+pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
+    %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
+picDelta=1*900000*8+8*1000*8; %bits,Amount of data we are gathering from each apoapsis picture sessionimuPull =352; %bits/pull,Amount of data we are gathering per data pull (Max Case)
+imuPull = 352;  % bits/pull
 imuFreq=10; %Hz (pull/sec)
 imuDelta=imuPull*time_step*imuFreq; %bits, Amount of data gathered per time_step
-telemDelta=7*time_step; %bits, Amount of telemetry data gathered per time_step
-bit_rate=9600*time_step; %bpm, Amount of data downlinked during time_step
+   %%% DEFINED RADIATION PULL, DELTA
+radPull=64; %bits/pull, Amount of data from radiation sensor
+radFreq=1; %Hz
+radDelta=radPull*time_step*radFreq*8; %bits, 8 sensors
+    %%% RADIATION DATA CONTINUOUS LIKE TELEMETRY
+telemDelta=7*time_step+radDelta; %bits, Amount of telemetry data gathered per time_step
+bit_loss = 0.60;
+bit_rate=9600*time_step*bit_loss;%bpm, Amount of data downlinked during time_step
+   %%% ADD COMPRESSION AND ENCODING
+% compRatio = 0.39;  % Compression Ratio 39%; Based on 'gzip' tool in Linux
+compRatio = 0.345;  % Compression Ratio 34.5%; Based on 'bzip2' tool in Linux
+encFactor = 0.9275;  % AX.25 encoding; Effects increase in data to be transmitted
 
-%IMU Cadence
-imu_initial = 2.5*24*3600/time_step; %Number consecutive of orbits where IMU data is taken immediately after deployment event
-imu_cadence = [1,0]; %After initial, cadence of imu data collection 
-%[# of passes to collect, # of orbits to wait]
+
+% %IMU Cadence
+% imu_initial = 2.5*24*3600/time_step; %Number consecutive of orbits where IMU data is taken immediately after deployment event
+% imu_cadence = [1,0]; %After initial, cadence of imu data collection 
+% %[# of passes to collect, # of orbits to wait]
 
 %Variable Parameters:
 ade_pos=zeros(1,3);%position of the ADE in EarthXYZ
@@ -149,17 +161,19 @@ rad=zeros(1,steps);
 pe=zeros(1,steps);
 loc=zeros(2,steps);
 data_state=zeros(1,steps);
-dataCount=576000000/2;%Goes up with imu_on, down with in_tmrange on
+   %%% ADDED TWO VARIABLES FOR PLOTTING
+dataProd_state=zeros(1,steps);
+dataTrans_state=zeros(1,steps);
+   %%% DATACOUNT IS DEFINED BY THE INITIAL [10] IMAGES AT START OF SIM
+   %%% SINCE ONLY IMAGES, ALREADY COMPRESSED, ADD ONLY ENCODING
+dataCount= floor((9*900000*8+9*1000*8) / encFactor);  %576000000/2;%Goes up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
-picsTaken=0;%Will only take one set per orbit
 transfer=0;%Set if any of the stations in range
 power_state=zeros(1,steps);
 prev_power_state=batt_init;
 positionXYZ=zeros(3,steps);
 pow_draw=zeros(1,steps);
-camera_counter=0;%Checking to see the number of times the camera takes pictures.
-camera_off=2.5*24*3600/time_step;%Timesteps in to when we turn the camera off.
 m_pass = 0; %Number of passes into mission (for IMU data collection)
 orbit_number = 0; %number of orbit
 shadowCount=1;
@@ -173,13 +187,42 @@ if(OrbitalData(1,10)<0.5 || OrbitalData(1,10)>359.5)
 else
     orbStartFlag=0;
 end
+t2=0:time_step:(steps-1)*time_step;
+
+    %%% ADD CADENCES
+% Cadence definition:
+cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
+cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
+cad_shift1 = [0; cad_counts];
+cad_shift2 = [cad_counts; max(cad_shift1)];
+cad_starts = find(cad_shift2-cad_shift1);
+cad_starts = [cad_starts; max(steps)+1];
+cad_iter = 1;
+picsTaken=0;%Will only take one set per orbit
+camera_counter=0;%Checking to see the number of times the camera takes pictures.
+orbCounter = 0;  % Number of orbits that have passed ?
+skip = 1;  % Skip orbit? T:1 F:0
+
 
 %Primary loop: Loops over all given orbit data
 for X=1:steps
         %Update current state
         %Check to see if we are close to periapsis for IMU data
         if(orbStartFlag && (DAYTOSEC*(time-orbStart)<pull_time/2 || period+DAYTOSEC*(orbStart-time)<pull_time/2))
-            imu_on(X)=1;
+%             imu_on(X)=1;
+            %%% ADD IMU CADENCE
+            if (rem(orbCounter/5,1)==0)
+                % On/Off Flip:
+                if skip == 1
+                    skip = 0;
+                elseif skip == 0
+                    skip = 1;
+                end
+            end
+            % IMU draw?
+            if skip == 0    
+                imu_on(X)=1;
+            end     
         end
         
         %Check to see if we are in the shadow
@@ -191,43 +234,78 @@ for X=1:steps
             end
         end
                 
-        %Check to see if we are in the VA Belts
-        %UPDATE WHEN FOUND
-        
         %Check to see if we are close to apoapsis for pictures
-        if(X<camera_off)
-            if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
-                picsTaken=1;
-                dataCount=dataCount+picDelta;
-                dataProd=dataProd+picDelta;
-                camera_counter=camera_counter+1;
-            end
+        % Option A, Cadence: Images for 1st 5 orbits, then only once per [2] week(s)
+        if (camera_counter <= 5)
+            picsTaken=1;  % Take only one set of photos per orbit
+            %%% ADD ONLY ENCODING TO CAMERA
+            dataCount=dataCount + floor(picDelta/encFactor);
+            dataProd=dataProd + floor(picDelta/encFactor);
+            camera_counter=camera_counter+1;
+        elseif (camera_counter == 5)
+            fprintf('\nDuring 1st 5 orbits:\n')
+            fprintf('Data Produced: %0.0f', dataProd)
+            fprintf('Data Transmitted, to date: %0.0f bits', dataCount);
+            fprintf('Time: %f days', 1+t2/DAYTOSEC);
+        elseif X == cad_starts(cad_iter)
+            dataCount=dataCount+floor(picDelta/encFactor);
+            dataProd=dataProd+floor(picDelta/encFactor);
+            cad_iter=cad_iter+1;
+            camera_counter=camera_counter+1;
         end
-        if (X<imu_initial) %Check if in the initial orbits after deployment event
-            %Update Data stored first
-            if(imu_on(X))
-               dataCount=dataCount+imuDelta;
-               dataProd=dataProd+imuDelta;
-            end
-            dataCount=dataCount+telemDelta; %Adding in telemetry data
-            dataProd=dataProd+telemDelta;
-        else %If not in initial orbits, follow IMU cadence
-            if orbit_number == 1 %If new orbit add 1 to mpass
-                m_pass = m_pass + 1;
-                orbit_number = 0;
-            end
-            if(imu_on(X)) && m_pass <= imu_cadence(1) %If mpass is a data pass then update data
-               dataCount=dataCount+imuDelta;
-               dataProd=dataProd+imuDelta;
-            else
-                imu_on(X) = 0; %Set IMU off for power draw
-            end
-            dataCount=dataCount+telemDelta; %Adding in telemetry data
-            dataProd=dataProd+telemDelta;
-            if m_pass == imu_cadence(1) + imu_cadence(2) %Update m pass
-                m_pass = 0;
-            end
+        % Option B, Cadence: 5 orbits on, 5 off:
+%         if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
+%             if skip == 0
+%                 picsTaken=1;  % Take only one set of photos per orbit
+%                 dataCount=dataCount + floor(picDelta/encFactor);
+%                 dataProd=dataProd + floor(picDelta/encFactor);
+%                 camera_counter=camera_counter+1;
+%             end    
+%         end
+
+            %%% WHOSE CADENCE WORK? NEED DISCUSSION
+%         if(X<camera_off)
+%             if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
+%                 picsTaken=1;
+%                 dataCount=dataCount+picDelta;
+%                 dataProd=dataProd+picDelta;
+%                 camera_counter=camera_counter+1;
+%             end
+%         end
+%         if (X<imu_initial) %Check if in the initial orbits after deployment event
+%             %Update Data stored first
+%             if(imu_on(X))
+%                dataCount=dataCount+imuDelta;
+%                dataProd=dataProd+imuDelta;
+%             end
+%             dataCount=dataCount+telemDelta; %Adding in telemetry data
+%             dataProd=dataProd+telemDelta;
+%         else %If not in initial orbits, follow IMU cadence
+%             if orbit_number == 1 %If new orbit add 1 to mpass
+%                 m_pass = m_pass + 1;
+%                 orbit_number = 0;
+%             end
+%             if(imu_on(X)) && m_pass <= imu_cadence(1) %If mpass is a data pass then update data
+%                dataCount=dataCount+imuDelta;
+%                dataProd=dataProd+imuDelta;
+%             else
+%                 imu_on(X) = 0; %Set IMU off for power draw
+%             end
+%             dataCount=dataCount+telemDelta; %Adding in telemetry data
+%             dataProd=dataProd+telemDelta;
+%             if m_pass == imu_cadence(1) + imu_cadence(2) %Update m pass
+%                 m_pass = 0;
+%             end
+%         end
+        % Update data stored first
+        if(imu_on(X))
+           %%% ADD COMPRESSION AND ENCODING TO IMU
+           dataCount=dataCount + floor(imuDelta*compRatio/encFactor);
+           dataProd=dataProd + floor(imuDelta*compRatio/encFactor);
         end
+        %%% ADD COMPRESSION AND ENCODING TO TELEMETRY
+        dataCount=dataCount + floor(telemDelta*compRatio/encFactor);
+        dataProd=dataProd + floor(telemDelta*compRatio/encFactor);
         
         %Downlink data if possible
         if(in_tmrange(X))
@@ -240,7 +318,9 @@ for X=1:steps
         
         %Update Data State
         data_state(X)=dataCount;
-        
+        dataProd_state(X) = dataProd;  % Total data produced up to this time_step
+        dataTrans_state(X) = dataTrans;  % Total data transmitted up to this time_step
+
         %Update battery count
         if batt_failtimes(batt_iter) == X
             batt_num = batt_num - 1;
@@ -304,8 +384,10 @@ for X=1:steps
         if(orbStartFlag)
             if(DAYTOSEC*time>=DAYTOSEC*orbStart+period)
                 orbStart=time;
-                picsTaken=0;
+                picsTaken=0;  %Reset to zero at beginning of new orbit
+                % camera_counter is a running total of times camera has been turned on
                 orbit_number = 1;
+                orbCounter = orbCounter+1; % Running total of orbits
             end
         else
            if(OrbitalData(X,10)<1 || OrbitalData(X,10)>359)
@@ -341,7 +423,9 @@ fprintf('\nTotal Data Downlinked: %f kB',dataTrans/8000)
 fprintf('\nTotal Data Delta: %f kB\n',(dataProd-dataTrans)/8000)
 
 %Process information
-t2=0:time_step:(steps-1)*time_step;
+stateData = [(1+t2/DAYTOSEC)', dataProd_state.', dataTrans_state.', data_state.'];
+stateFile = 'DITL_comp345_cadence-1pics-8thumbs-2wk_imu-5on5off_init22.csv';
+csvwrite(stateFile,stateData)
 
 % %Big Plot
 figure(1)
@@ -389,17 +473,33 @@ plot(1+t2/DAYTOSEC,in_shadow)
 title('Satellite in Shadow')
 xlabel('Time (Days)')
 ylabel('State');
+
+   %%%  COMPARE DATA STATE TO MEMORY MAX, AND DATA TRANSMITTED TO DATA PRODUCED
 figure(6)
 plot(1+t2/DAYTOSEC,data_state)
 title('Data Stored')
 xlabel('Time (Days)')
 ylabel('Data (bits)')
+set(gca,'FontSize',16)
+xloc=2;
+yloc=max(data_state)*0.98;
+text(xloc,yloc,'Note: Memory Storage Maximum is 2.56e+11 bits.','FontSize',14)
 figure(7)
+plot(1+t2/DAYTOSEC,dataTrans_state, 1+t2/DAYTOSEC,dataProd_state)
+title('Total Data Transmitted Compared to Production')
+xlabel('Time (Days)')
+ylabel('Data (bits)')
+legend('Total Data Transmitted', 'Total Data Produced','Location','northwest')
+set(gca,'FontSize',16)
+
+
+
+figure(8)
 plot(1+t2/DAYTOSEC,in_tmrange)
 title('Transmitting')
 xlabel('Time (Days)')
 ylabel('Flag')
-figure(8)
+figure(9)
 plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
 ylim([0,1.1*max(power_state)]);
 if strcmp(sim_case,'Average')
