@@ -74,6 +74,7 @@ spfail_modes = [1,1,1,1];
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
 picDelta=1*900000*8+8*1000*8; %bits,Amount of data we are gathering from each apoapsis picture sessionimuPull =352; %bits/pull,Amount of data we are gathering per data pull (Max Case)
+cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
 imuPull = 352;  % bits/pull
 imuFreq=10; %Hz (pull/sec)
@@ -209,6 +210,8 @@ camera_counter=0;%Checking to see the number of times the camera takes pictures.
 orbCounter = 0;  % Number of orbits that have passed ?
 skip = 1;  % Skip orbit? Y:1 N:0
 imuCount = 0;
+at_fmsc_rad=0; % Y:1, N:0
+at_fmsc_imu=0; % Y:1, N:0
 
 
 %Primary loop: Loops over all given orbit data
@@ -243,26 +246,30 @@ for X=1:steps
             end
         end
                 
+        
         %Check to see if we are close to apoapsis for pictures
         % Option A, Cadence: Images for 1st 5 orbits, then only once per [2] week(s)
-        if (camera_counter < 5)
-            picsTaken=1  % Take only one set of photos per orbit
-            camera_counter=camera_counter+1
-            dataCount=dataCount + floor(picDelta/encFactor);
-            dataProd=dataProd + floor(picDelta/encFactor);
-            picTotal = picTotal + floor(picDelta/encFactor);
-        elseif (camera_counter == 5)
-            fprintf('\nDuring 1st 5 orbits:\n')
-            fprintf('Data Produced: %0.0f Mb\n', dataProd/1e6)
-            fprintf('Data Transmitted, to date: %0.0f Mb\n', dataCount/1e6);
-            fprintf('Time: %f days\n', 1+t2(X)/DAYTOSEC);
-            camera_counter=camera_counter+1
-        elseif X == cad_starts(cad_iter)
-            dataCount=dataCount + floor(picDelta/encFactor);
-            dataProd=dataProd + floor(picDelta/encFactor);
-            picTotal = picTotal + floor(picDelta/encFactor);
-            cad_iter=cad_iter+1;
-            camera_counter=camera_counter+1;
+        if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
+            if (camera_counter <= 5)
+                fprintf('X: %d',X)
+                picsTaken=1  % Take only one set of photos per orbit
+                camera_counter=camera_counter+1
+                dataCount=dataCount + floor(picDelta/encFactor);
+                dataProd=dataProd + floor(picDelta/encFactor);
+                picTotal = picTotal + floor(picDelta/encFactor);
+    %         elseif (camera_counter == 5)
+    %             fprintf('\nFMSC for IMU (1st 5 orbits)\n')
+    %             fprintf('Data Produced: %0.0f Mb\n', dataProd/1e6)
+    %             fprintf('Data Transmitted, to date: %0.0f Mb\n', dataCount/1e6);
+    %             fprintf('Time: %f days\n', 1+t2(X)/DAYTOSEC);
+    %             camera_counter=camera_counter+1
+            elseif X == cad_starts(cad_iter)
+                dataCount=dataCount + floor(picDelta/encFactor);
+                dataProd=dataProd + floor(picDelta/encFactor);
+                picTotal = picTotal + floor(picDelta/encFactor);
+                cad_iter=cad_iter+1;
+                camera_counter=camera_counter+1;
+            end
         end
         pic_state(X) = picTotal; % Running total of specifically camera data
         % Option B, Cadence: 5 orbits on, 5 off:
@@ -318,12 +325,27 @@ for X=1:steps
            imuTotal = imuTotal + floor(imuDelta*compRatio/encFactor);  % Running total of specifically IMU datae
         end
         imu_state(X) = imuTotal;
+        if (at_fmsc_imu==0 && camera_counter == 5)
+            fprintf('\nFMSC for IMU (1st 5 orbits)\n')
+            fprintf('Data Produced by IMU: %0.0f Mb\n', imu_state(X)/1e6)
+            fprintf('Total Data Produced: %0.0f Mb\n', dataProd/1e6)
+            fprintf('Data Transmitted, to date: %0.0f Mb\n', imu_state(X)/1e6);
+            fprintf('Time: %f days\n', 1+t2(X)/DAYTOSEC);
+            imu_state_fmsc = imu_state(X);
+            at_fmsc_imu=1;
+        end
         %%% ADD COMPRESSION AND ENCODING TO TELEMETRY AND RADIATION
         dataCount=dataCount + floor((telemDelta+radDelta)*compRatio/encFactor);
         dataProd=dataProd + floor((telemDelta+radDelta)*compRatio/encFactor);
         %%% is 'steps' (X) the number of minutes that have passed???
         rad_state(X) = X * floor(radDelta*compRatio/encFactor);
         telem_state(X) = X * floor(telemDelta*compRatio/encFactor);
+        if (at_fmsc_rad==0 && camera_counter == 3)
+                % 3 orbits have now passed --> FMSC for Rad Sensors
+                rad_state_fmsc = rad_state(X);
+                fprintf('FMSC Radiation Data: %0.0f bits\n', rad_state_fmsc)
+                at_fmsc_rad=1;
+        end
 
         %Downlink data if possible
         if(in_tmrange(X))
@@ -405,7 +427,7 @@ for X=1:steps
                 picsTaken=0;  %Reset to zero at beginning of new orbit
                 % camera_counter is a running total of times camera has been turned on
                 orbit_number = 1;
-                orbCounter = orbCounter+1 % Running total of orbits
+                orbCounter = orbCounter+1; % Running total of orbits
             end
         else
            if(OrbitalData(X,10)<1 || OrbitalData(X,10)>359)
@@ -438,7 +460,14 @@ fprintf('\nMax Data State: %f kB',max(dataStore_state)/8000)
 fprintf('\nIMU Draw Time: %f min\n',pull_time/60)
 fprintf('\nTotal Data Produced: %f kB',dataProd/8000)
 fprintf('\nTotal Data Downlinked: %f kB',dataTrans/8000)
-fprintf('\nTotal Data Delta: %f kB\n',(dataProd-dataTrans)/8000)
+fprintf('\nTotal Data Delta: %f kB\n\n',(dataProd-dataTrans)/8000)
+fprintf('FMSC Data Volumes:\n')
+fprintf('IMU: %0.3f Mb\n',imu_state_fmsc/1e6)
+fprintf('Cameras: %0.3f Mb\n',cam_fmsc/1e6)
+fprintf('Rad Sensors: %0.3f Mb\n',rad_state_fmsc/1e6)
+fprintf('-------------------------\n')
+total_fmsc = imu_state_fmsc + cam_fmsc + rad_state_fmsc;
+fprintf('Total for FMSC: %0.3f Mb\n\n', total_fmsc/1e6)
 
 %Process information
 stateData = [(1+t2/DAYTOSEC)', dataProd_state.', dataTrans_state.', dataStore_state.'];
@@ -498,6 +527,7 @@ plot(1+t2/DAYTOSEC,dataStore_state)
 title('Data Stored')
 xlabel('Time (Days)')
 ylabel('Data (bits)')
+grid on
 set(gca,'FontSize',16)
 xloc=2;
 yloc=max(dataStore_state)*0.98;
@@ -508,6 +538,7 @@ title('Total Data Transmitted Compared to Production')
 xlabel('Time (Days)')
 ylabel('Data (bits)')
 legend('Total Data Transmitted', 'Total Data Produced','Location','northwest')
+grid on
 set(gca,'FontSize',16)
 figure(8)
 hold on
@@ -520,6 +551,7 @@ title('Total Data Produced per Subsystem')
 xlabel('Time (Days)')
 ylabel('Data (bits)')
 legend('Total Data Produced', 'Cameras', 'IMU', 'Radiation Sensors', 'Telemetry', 'Location','northwest')
+grid on
 set(gca,'FontSize',16)
 hold off
 fprintf('DO THE TOTALS MATCH?')
