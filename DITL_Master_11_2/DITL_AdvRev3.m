@@ -250,7 +250,8 @@ for X=1:steps
         %Check to see if we are close to apoapsis for pictures
         % Option A, Cadence: Images for 1st 5 orbits, then only once per [2] week(s)
         if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
-            if (camera_counter <= 5)
+            % If the camera has taken less 5 photos [0:4]
+            if (camera_counter < 5)
                 fprintf('X: %d',X)
                 picsTaken=1  % Take only one set of photos per orbit
                 camera_counter=camera_counter+1
