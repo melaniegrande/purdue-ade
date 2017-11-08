@@ -80,7 +80,7 @@ imuPull = 352;  % bits/pull
 imuFreq=10; %Hz (pull/sec)
 imuDelta=imuPull*imuFreq*time_step; %bits, Amount of data gathered per time_step
    %%% DEFINED RADIATION PULL, DELTA
-radPull=32; %bits/pull, Amount of data from radiation sensor incl. temperature
+radPull=32; %bits/pull, Amount of data from radiation sensor incl. temperature MRT NOTE: INCLUDING WHAT TEMPERATURE?
 radFreq=1/60; %Hz
 radDelta=8*radPull*radFreq*time_step; %bits, 8 sensors
 telemDelta=floor(524288 / 24 / 3600) * time_step; %bits, Amount of telemetry data gathered per time_step
