@@ -249,7 +249,13 @@ for X=1:steps
         
         %Check to see if we are close to apoapsis for pictures
         % Option A, Cadence: Images for 1st 5 orbits, then only once per [2] week(s)
-        if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
+        % MRT Note: This flag to check near apoapsis only checks if you're
+        % at a point greater than halfway through your orbit in mean
+        % anomaly.  That's incorrect for an apoapsis check.  It was also
+        % messing with the 2 week camera cadence.  I've commented it out
+        % for now.
+        %if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
+        if(orbStartFlag && picsTaken==0)
             % If the camera has taken less 5 photos [0:4]
             if (camera_counter < 5)
                 fprintf('X: %d',X)
