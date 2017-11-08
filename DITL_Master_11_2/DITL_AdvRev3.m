@@ -257,12 +257,6 @@ for X=1:steps
                 dataCount=dataCount + floor(picDelta/encFactor);
                 dataProd=dataProd + floor(picDelta/encFactor);
                 picTotal = picTotal + floor(picDelta/encFactor);
-    %         elseif (camera_counter == 5)
-    %             fprintf('\nFMSC for IMU (1st 5 orbits)\n')
-    %             fprintf('Data Produced: %0.0f Mb\n', dataProd/1e6)
-    %             fprintf('Data Transmitted, to date: %0.0f Mb\n', dataCount/1e6);
-    %             fprintf('Time: %f days\n', 1+t2(X)/DAYTOSEC);
-    %             camera_counter=camera_counter+1
             elseif X == cad_starts(cad_iter)
                 dataCount=dataCount + floor(picDelta/encFactor);
                 dataProd=dataProd + floor(picDelta/encFactor);
