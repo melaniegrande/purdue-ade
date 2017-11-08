@@ -196,7 +196,7 @@ end
 t2=0:time_step:(steps-1)*time_step;
 
 % Cadence definition:
-cadence = 7 * (1);  % Camera cadence: 1x per [X] weeks
+cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
 cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
 cad_shift1 = [0; cad_counts];
 cad_shift2 = [cad_counts; max(cad_shift1)];
@@ -217,9 +217,9 @@ for X=1:steps
         %Update current state
         %Check to see if we are close to periapsis for IMU data
         if(orbStartFlag && (DAYTOSEC*(time-orbStart)<pull_time/2 || period+DAYTOSEC*(orbStart-time)<pull_time/2))
-            % Logic turns on IMU only if it's at the beginning of an orbit?
-            % && if within +/- 1/2 pull_time on either side of periapsis
-            % imu_on(X)=1;
+%             % Logic turns on IMU only if it's at the beginning of an orbit?
+%             % && if within +/- 1/2 pull_time on either side of periapsis
+%             imu_on(X)=1;
             if (rem(orbCounter/5,1)==0)
                 % On/Off Flip:
                 if skip == 1
@@ -255,7 +255,6 @@ for X=1:steps
         if(orbStartFlag && picsTaken==0)
             % If the camera has taken less 5 photos [0:4]
             if (camera_counter < 5)
-                fprintf('X: %d',X)
                 picsTaken=1  % Take only one set of photos per orbit
                 camera_counter=camera_counter+1
                 dataCount=dataCount + floor(picDelta/encFactor);
@@ -269,7 +268,7 @@ for X=1:steps
                 camera_counter=camera_counter+1;
             end
         end
-        pic_state(X) = picTotal; % Running total of specifically camera data
+         
         % Option B, Cadence: 5 orbits on, 5 off:
 %         if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
 %             if skip == 0
@@ -277,8 +276,10 @@ for X=1:steps
 %                 dataCount=dataCount + floor(picDelta/encFactor);
 %                 dataProd=dataProd + floor(picDelta/encFactor);
 %                 camera_counter=camera_counter+1;
+%                 picTotal = picTotal + floor(picDelta/encFactor);
 %             end    
 %         end
+        pic_state(X) = picTotal; % Running total of specifically camera data
 
             %%% WHOSE CADENCE WORK? NEED DISCUSSION
 %         if(X<camera_off)
@@ -467,7 +468,7 @@ fprintf('Total for FMSC: %0.3f Mb\n\n', total_fmsc/1e6)
 
 %Process information
 stateData = [(1+t2/DAYTOSEC)', dataProd_state.', dataTrans_state.', dataStore_state.'];
-stateFile = 'DITL_comp345_cadence-1pics-8thumbs-1wk_imu-5on5off_init22.csv';
+stateFile = 'DITL_comp345_cam-1pics-8thumbs-2wk_imu-5on5off_init9.csv';
 csvwrite(stateFile,stateData)
 
 % %Big Plot
@@ -527,7 +528,7 @@ grid on
 set(gca,'FontSize',16)
 xloc=2;
 yloc=max(dataStore_state)*0.98;
-text(xloc,yloc,'Note: Memory Storage Maximum is 2.56e+11 bits.','FontSize',14)
+text(xloc,yloc+2e6,'Note: Memory Storage Maximum is 2.56e+11 bits.','FontSize',14)
 figure(7)
 plot(1+t2/DAYTOSEC,dataTrans_state, 1+t2/DAYTOSEC,dataProd_state)
 title('Total Data Transmitted Compared to Production')
