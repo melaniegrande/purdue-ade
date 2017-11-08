@@ -33,7 +33,7 @@ clc
 
 %Set Simulation Case ('Average','Min', or 'Max')
 global sim_case
-sim_case = 'Max';
+sim_case = 'Average';
 
 %Constants:
 DEGTORAD=pi/180;
