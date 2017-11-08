@@ -86,7 +86,6 @@ radDelta=8*radPull*radFreq*time_step; %bits, 8 sensors
 telemDelta=floor(524288 / 24 / 3600) * time_step; %bits, Amount of telemetry data gathered per time_step
 bit_loss = 0.60;
 bit_rate=9600*time_step*bit_loss;%bpm, Amount of data downlinked during time_step
-   %%% ADD COMPRESSION AND ENCODING
 % compRatio = 0.39;  % Compression Ratio 39%; Based on 'gzip' tool in Linux
 compRatio = 0.345;  % Compression Ratio 34.5%; Based on 'bzip2' tool in Linux
 encFactor = 0.9275;  % AX.25 encoding; Effects increase in data to be transmitted
@@ -161,7 +160,7 @@ rad=zeros(1,steps);
 pe=zeros(1,steps);
 loc=zeros(2,steps);
    %%% DATACOUNT IS DEFINED BY THE INITIAL [10] IMAGES AT START OF SIM
-   %%% SINCE ONLY IMAGES, ALREADY COMPRESSED, ADD ONLY ENCODING
+   %%% NOTE: IMAGES ARE ALREADY COMPRESSED, ADD ONLY ENCODING
 dataCount= floor((9*900000*8+9*1000*8) / encFactor); %Goes up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
@@ -196,7 +195,6 @@ else
 end
 t2=0:time_step:(steps-1)*time_step;
 
-    %%% ADD CADENCES
 % Cadence definition:
 cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
 cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
@@ -219,10 +217,9 @@ for X=1:steps
         %Update current state
         %Check to see if we are close to periapsis for IMU data
         if(orbStartFlag && (DAYTOSEC*(time-orbStart)<pull_time/2 || period+DAYTOSEC*(orbStart-time)<pull_time/2))
-            % Logic turns on IMU only once when approaching periapsis and only
-            % for 20 mins??
+            % Logic turns on IMU only if it's at the beginning of an orbit?
+            % && if within +/- 1/2 pull_time on either side of periapsis
             % imu_on(X)=1;
-            %%% ADD IMU CADENCE
             if (rem(orbCounter/5,1)==0)
                 % On/Off Flip:
                 if skip == 1
@@ -320,7 +317,6 @@ for X=1:steps
 
         % Update data stored first
         if(imu_on(X))
-           %%% ADD COMPRESSION AND ENCODING TO IMU
            dataCount=dataCount + floor(imuDelta*compRatio/encFactor);
            dataProd=dataProd + floor(imuDelta*compRatio/encFactor);
            imuTotal = imuTotal + floor(imuDelta*compRatio/encFactor);  % Running total of specifically IMU datae
@@ -335,7 +331,6 @@ for X=1:steps
             imu_state_fmsc = imu_state(X);
             at_fmsc_imu=1;
         end
-        %%% ADD COMPRESSION AND ENCODING TO TELEMETRY AND RADIATION
         dataCount=dataCount + floor((telemDelta+radDelta)*compRatio/encFactor);
         dataProd=dataProd + floor((telemDelta+radDelta)*compRatio/encFactor);
         %%% is 'steps' (X) the number of minutes that have passed???
