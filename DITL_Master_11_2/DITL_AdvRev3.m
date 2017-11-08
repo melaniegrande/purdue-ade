@@ -80,9 +80,9 @@ imuPull = 352;  % bits/pull
 imuFreq=10; %Hz (pull/sec)
 imuDelta=imuPull*imuFreq*time_step; %bits, Amount of data gathered per time_step
    %%% DEFINED RADIATION PULL, DELTA
-radPull=64; %bits/pull, Amount of data from radiation sensor incl. temperature
-radFreq=1; %Hz
-radDelta=radPull*radFreq*time_step; %bits, 8 sensors
+radPull=32; %bits/pull, Amount of data from radiation sensor incl. temperature
+radFreq=1/60; %Hz
+radDelta=8*radPull*radFreq*time_step; %bits, 8 sensors
 telemDelta=floor(524288 / 24 / 3600) * time_step; %bits, Amount of telemetry data gathered per time_step
 bit_loss = 0.60;
 bit_rate=9600*time_step*bit_loss;%bpm, Amount of data downlinked during time_step
