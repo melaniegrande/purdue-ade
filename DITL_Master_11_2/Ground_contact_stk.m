@@ -15,14 +15,16 @@ function [ conn,run ] = Ground_contact_stk( startdate,enddate )
 %which is better for you we can discuss tomorrow. thanks for understanding
 %about not meeting today
 
+global sim_case
+
 % MRT Note: We should come up with a way to choose which case to use within
 % this contact function.  For now it is set to Average for use in a
 % presentation. Adding an argument to the function to pick the case would
 % be a good idea.
-Cal = csvread('CalPolycontact - Average.csv',1,0); %takes excel data calpoly
-Purdue = csvread('Purduecontact - Average.csv',1,0); %takes excel data purdue
-ASU = csvread('ASUcontact - Average.csv',1,0); %takes excel data
-Tech = csvread('GaTechcontact - Average.csv',1,0); %takes excel data
+Cal = csvread(['CalPolycontact - ', sim_case, '.csv'],1,0); %takes excel data calpoly
+Purdue = csvread(['Purduecontact - ', sim_case, '.csv'],1,0); %takes excel data purdue
+ASU = csvread(['ASUcontact - ', sim_case, '.csv'],1,0); %takes excel data
+Tech = csvread(['GaTechcontact - ', sim_case, '.csv'],1,0); %takes excel data
 julianseconds = (((1/24)/60)/60); %creates seconds in julian time
 step = julianseconds*60; % 60 second step
 
