@@ -73,7 +73,8 @@ spfail_modes = [1,1,1,1];
 
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
-picDelta=1*900000*8+8*1000*8; %bits,Amount of data we are gathering from each apoapsis picture sessionimuPull =352; %bits/pull,Amount of data we are gathering per data pull (Max Case)
+picDelta=0*900000*8+8*1000*8; %bits,Amount of data we are gathering from each apoapsis picture sessionimuPull =352; %bits/pull,Amount of data we are gathering per data pull (Max Case)
+picDelta_full = 1*900000*8;  %bits; One full size photo
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
 imuPull = 352;  % bits/pull
@@ -161,7 +162,7 @@ pe=zeros(1,steps);
 loc=zeros(2,steps);
    %%% DATACOUNT IS DEFINED BY THE INITIAL [10] IMAGES AT START OF SIM
    %%% NOTE: IMAGES ARE ALREADY COMPRESSED, ADD ONLY ENCODING
-dataCount= floor((9*900000*8+9*1000*8) / encFactor); %Goes up with imu_on, down with in_tmrange on
+dataCount= floor((0*900000*8+9*1000*8) / encFactor); %Goes up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
 dataStore_state=zeros(1,steps);
@@ -219,19 +220,19 @@ for X=1:steps
         if(orbStartFlag && (DAYTOSEC*(time-orbStart)<pull_time/2 || period+DAYTOSEC*(orbStart-time)<pull_time/2))
 %             % Logic turns on IMU only if it's at the beginning of an orbit?
 %             % && if within +/- 1/2 pull_time on either side of periapsis
-%             imu_on(X)=1;
-            if (rem(orbCounter/5,1)==0)
-                % On/Off Flip:
-                if skip == 1
-                    skip = 0;
-                elseif skip == 0
-                    skip = 1;
-                end
-            end
-            % IMU draw?
-            if skip == 0    
-                imu_on(X)=1;
-            end     
+            imu_on(X)=1;
+%             if (rem(orbCounter/5,1)==0)
+%                 % On/Off Flip:
+%                 if skip == 1
+%                     skip = 0;
+%                 elseif skip == 0
+%                     skip = 1;
+%                 end
+%             end
+%             % IMU draw?
+%             if skip == 0    
+%                 imu_on(X)=1;
+%             end     
         end
         
         %Check to see if we are in the shadow
@@ -261,9 +262,9 @@ for X=1:steps
                 dataProd=dataProd + floor(picDelta/encFactor);
                 picTotal = picTotal + floor(picDelta/encFactor);
             elseif X == cad_starts(cad_iter)
-                dataCount=dataCount + floor(picDelta/encFactor);
-                dataProd=dataProd + floor(picDelta/encFactor);
-                picTotal = picTotal + floor(picDelta/encFactor);
+                dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
+                dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
+                picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
                 cad_iter=cad_iter+1;
                 camera_counter=camera_counter+1;
             end
@@ -468,7 +469,7 @@ fprintf('Total for FMSC: %0.3f Mb\n\n', total_fmsc/1e6)
 
 %Process information
 stateData = [(1+t2/DAYTOSEC)', dataProd_state.', dataTrans_state.', dataStore_state.'];
-stateFile = 'DITL_comp345_cam-1pics-8thumbs-2wk_imu-5on5off_init9.csv';
+stateFile = 'DITL_comp345_cam-1pics-8thumbs-2wk_imu-all_init9-0pics.csv';
 csvwrite(stateFile,stateData)
 
 % %Big Plot
