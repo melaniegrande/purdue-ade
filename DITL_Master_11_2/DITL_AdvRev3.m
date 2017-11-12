@@ -44,7 +44,7 @@ time_step=60; %in seconds
 % % Min case: 
 
 %Power Parameters
-batt_num = 3; %number of batteries at start
+batt_num = 2; %number of batteries at start
 batt_volt = 3.7; %Volts
 batt_amp_min = 2.52; %Amps
 batt_init = 10;%Watt-hours
