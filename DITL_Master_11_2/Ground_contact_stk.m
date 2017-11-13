@@ -17,10 +17,7 @@ function [ conn,run ] = Ground_contact_stk( startdate,enddate )
 
 global sim_case
 
-% MRT Note: We should come up with a way to choose which case to use within
-% this contact function.  For now it is set to Average for use in a
-% presentation. Adding an argument to the function to pick the case would
-% be a good idea.
+% Creates variables based on the global variable sim_case
 Cal = csvread(['CalPolycontact - ', sim_case, '.csv'],1,0); %takes excel data calpoly
 Purdue = csvread(['Purduecontact - ', sim_case, '.csv'],1,0); %takes excel data purdue
 ASU = csvread(['ASUcontact - ', sim_case, '.csv'],1,0); %takes excel data
