@@ -24,6 +24,19 @@ ASU = csvread(['ASUcontact - ', sim_case, '.csv'],1,0); %takes excel data
 Tech = csvread(['GaTechcontact - ', sim_case, '.csv'],1,0); %takes excel data
 julianseconds = (((1/24)/60)/60); %creates seconds in julian time
 step = julianseconds*60; % 60 second step
+step60 = 60; % minimum contact duration
+
+durCal = Cal(:,3);
+durPurdue = Purdue(:,3);
+durASU = ASU(:,3);
+durTech = Tech(:,3);
+
+Cal(find(durCal < step60),:) = [];
+Purdue(find(durPurdue < step60),:) = [];
+ASU(find(durASU < step60),:) = [];
+Tech(find(durTech < step60),:) = [];
+
+
 
 jd1Cal=Cal(:,1);
 jd2Cal=Cal(:,2);
@@ -33,6 +46,7 @@ jd1Tech=Tech(:,1);
 jd2Tech=Tech(:,2);
 jd1ASU=ASU(:,1);
 jd2ASU=ASU(:,2);
+
 
 
 % %%this for loop is used to make an array of julian dates of ground contact
@@ -157,14 +171,14 @@ for a = startdate:step:(enddate+step)
             conn(x) = 1; 
             Techconn(x) = 1;
             Techtouch=Techtouch+1;
-        else
-            if(Techprev)
+%         else
+%             if(Techprev)
                 Techcount=Techcount+1;
                 if(Techcount>Techlen)
                     Techflag=0;
                     fprintf('Last GeorgiaTech Contact: %f %f\n',jd2Tech(Techcount-1),Techcount-1);
                 end
-            end
+%             end
             Techprev=0;
         end
     end
