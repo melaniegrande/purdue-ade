@@ -33,9 +33,7 @@ clc
 
 %Set Simulation Case ('Average','Min', or 'Max')
 global sim_case
-% sim_case = 'Average';
 sim_case = 'Max';
-% sim_case = 'Min';
 
 %Constants:
 DEGTORAD=pi/180;
@@ -71,8 +69,7 @@ transdraw=4.965977*time_step/3600; %Watt-hours per time step
 % Normal Ops
 normdraw=0.61947*time_step/3600; %Watt-hours per time step
 % Safe Mode
-safedraw=0.618678*time_step/3600; %Watt-hours per time step
-safe_flag = 0;
+safedraw=0.618678*time_step/3600; %Watt-hours pe
 
 %Failure Modes 
 global spfail_modes
@@ -196,7 +193,6 @@ orbit_number = 0; %number of orbit
 shadowCount=1;
 temp_pow=zeros(1,steps);
 pow_hold=0;
-safe_flag_vector = zeros(1,steps);
 
 time=OrbitalData(1,1);
 if(OrbitalData(1,10)<0.5 || OrbitalData(1,10)>359.5)
@@ -357,7 +353,7 @@ for X=1:steps
         end
 
         %Downlink data if possible
-        if(in_tmrange(X) && ~safe_flag)
+        if(in_tmrange(X))
              dataCount=dataCount-bit_rate;
              dataTrans=dataTrans+bit_rate;
         end
@@ -431,14 +427,14 @@ for X=1:steps
         if(power_state(X) < batt_safe)
             % if power state low, enter safe mode
             safe_flag = 1;
+            if(safe_flag && (power_state(X) == batt_max))
+                safe_flag = 0;
+            end
         elseif(power_state(X) < batt_min)
             fprintf('\n\nPower state fell below minimum: mission end\n\n');
             break  %End sim
         end
-        if(safe_flag && (power_state(X) >= batt_max*.95))
-                safe_flag = 0;
-        end
-        safe_flag_vector(X) = safe_flag;
+        
         %Update flags
         prev_power_state=power_state(X);
         time=OrbitalData(X,1);
@@ -510,7 +506,7 @@ plot(1+t2/DAYTOSEC,dataStore_state)
 title('Data Stored')
 ylabel('Data (bits)')
 subplot(5,1,4)
-plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+plot(1+t2/DAYTOSEC,in_tmrange)
 title('Transmitting')
 ylabel('Flag')
 subplot(5,1,5)
@@ -579,20 +575,20 @@ fprintf('DO THE TOTALS MATCH?')
 total = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
 final_data_production_total = dataProd_state(X)
 
-figure(9)
-plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-title('Transmitting')
-xlabel('Time (Days)')
-ylabel('Flag')
-figure(10)
-plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
-ylim([0,1.1*max(power_state)]);
-if strcmp(sim_case,'Average')
-    title('Power State - Average Deorbit Case','FontSize',20)
-elseif strcmp(sim_case,'Max')
-    title('Power State - Max Deorbit Case','FontSize',20)
-elseif strcmp(sim_case,'Min')
-    title('Power State - Min Deorbit Case','FontSize',20)
-end
-xlabel('Time (Days)','FontSize',20)
-ylabel('Energy (Watt-hours)','FontSize',20)    
+% figure(9)
+% plot(1+t2/DAYTOSEC,in_tmrange)
+% title('Transmitting')
+% xlabel('Time (Days)')
+% ylabel('Flag')
+% figure(10)
+% plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
+% ylim([0,1.1*max(power_state)]);
+% if strcmp(sim_case,'Average')
+%     title('Power State - Average Deorbit Case','FontSize',20)
+% elseif strcmp(sim_case,'Max')
+%     title('Power State - Max Deorbit Case','FontSize',20)
+% elseif strcmp(sim_case,'Min')
+%     title('Power State - Min Deorbit Case','FontSize',20)
+% end
+% xlabel('Time (Days)','FontSize',20)
+% ylabel('Energy (Watt-hours)','FontSize',20)    
