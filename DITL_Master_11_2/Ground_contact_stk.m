@@ -190,19 +190,22 @@ for a = startdate:step:(enddate+step)
     set=1;
 end
 
+% MRT Note: We should probably add an x axis to these plots
+
 figure(12)
 subplot(4,1,1)
-plot(Calconn)
+plot(run - run(1), Calconn)
 title('CalPoly Contacts');
 subplot(4,1,2)
-plot(Purconn)
+plot(run - run(1), Purconn)
 title('Purdue Contacts');
 subplot(4,1,3)
-plot(Techconn)
+plot(run - run(1), Techconn)
 title('Georgia Tech Contacts');
 subplot(4,1,4)
-plot(ASUconn)
+plot(run - run(1), ASUconn)
 title('Arizona State Contacts');
+xlabel('Time (Days)')
 
 end
 
