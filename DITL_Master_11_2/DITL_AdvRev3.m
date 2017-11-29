@@ -38,6 +38,12 @@ sim_case = 'Average';
 % sim_case = 'Max';
 % sim_case = 'Min';
 
+%Set slant range case (0 = current estimates, 1 = estimates based on
+%CalPoly heritage of ~3000km)
+global short_slant
+short_slant = 0;
+%short_slant = 1;
+
 %Constants:
 DEGTORAD=pi/180;
 RADTODEG=180/pi;
