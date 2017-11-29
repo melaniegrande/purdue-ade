@@ -210,7 +210,7 @@ end
 t2=0:time_step:(steps-1)*time_step;
 
 % Cadence definition:
-cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
+cadence = 7 * (1);  % Camera cadence: 1x per [X] weeks
 cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
 cad_shift1 = [0; cad_counts];
 cad_shift2 = [cad_counts; max(cad_shift1)];
