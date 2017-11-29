@@ -20,7 +20,8 @@
 %Our pseudo-inertial frame for this simulation will be referenced to our
 %predicted launch site.
 %Only currently taking pictures at apoapsis
-%We are not currently integrating any "safe mode" logic
+%We are not currently integrating any "safe mode" logic - SAFE MODE LOGIC
+%IMPLEMENTED
 %The angle of the umbra and penumbra used is considered to be approximately
 %the same value
 %Using bit rate of 9600 bps
@@ -33,8 +34,8 @@ clc
 
 %Set Simulation Case ('Average','Min', or 'Max')
 global sim_case
-% sim_case = 'Average';
-sim_case = 'Max';
+sim_case = 'Average';
+% sim_case = 'Max';
 % sim_case = 'Min';
 
 %Constants:
@@ -358,7 +359,7 @@ for X=1:steps
         end
 
         %Downlink data if possible
-        if(in_tmrange(X) && ~safe_flag)
+        if(in_tmrange(X) && ~safe_flag && dataCount>bit_rate)
              dataCount=dataCount-bit_rate;
              dataTrans=dataTrans+bit_rate;
         end
