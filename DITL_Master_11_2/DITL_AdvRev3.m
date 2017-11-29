@@ -87,7 +87,8 @@ picDelta=0*900000*8+8*1000*8; %bits,Amount of data we are gathering from each ap
 picDelta_full = 1*900000*8;  %bits; One full size photo
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
-imuPull = 352;  % bits/pull
+discComp = 0.25;  % Discretization of IMU data
+imuPull = 352*discComp;  % bits/pull
 imuFreq=10; %Hz (pull/sec)
 imuDelta=imuPull*imuFreq*time_step; %bits, Amount of data gathered per time_step
    %%% DEFINED RADIATION PULL, DELTA
@@ -95,7 +96,7 @@ radPull=32; %bits/pull, Amount of data from radiation sensor incl. temperature M
 radFreq=1/60; %Hz
 radDelta=8*radPull*radFreq*time_step; %bits, 8 sensors
 telemDelta=floor(524288 / 24 / 3600) * time_step; %bits, Amount of telemetry data gathered per time_step
-bit_loss = 0.60;
+bit_loss = 0.60;  % 60% estimated loss due to bad orientation, missed data, or other problems
 bit_rate=9600*time_step*bit_loss;%bpm, Amount of data downlinked during time_step
 % compRatio = 0.39;  % Compression Ratio 39%; Based on 'gzip' tool in Linux
 compRatio = 0.345;  % Compression Ratio 34.5%; Based on 'bzip2' tool in Linux
@@ -170,9 +171,9 @@ imu_on=zeros(1,steps);
 rad=zeros(1,steps);
 pe=zeros(1,steps);
 loc=zeros(2,steps);
-   %%% DATACOUNT IS DEFINED BY THE INITIAL [10] IMAGES AT START OF SIM
-   %%% NOTE: IMAGES ARE ALREADY COMPRESSED, ADD ONLY ENCODING
-dataCount= floor((0*900000*8+9*1000*8) / encFactor); %Goes up with imu_on, down with in_tmrange on
+   %%% DATACOUNT IS DEFINED BY THE INITIAL THUMBNAILS, IMU DATA, AND OTHER
+   %%% CHECKOUT DATA
+dataCount= floor((2.293e5) / encFactor); %Goes up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
 dataStore_state=zeros(1,steps);
@@ -337,10 +338,10 @@ for X=1:steps
         imu_state(X) = imuTotal;
         if (at_fmsc_imu==0 && camera_counter == 5)
             fprintf('\nFMSC for IMU (1st 5 orbits)\n')
-            fprintf('Data Produced by IMU: %0.0f Mb\n', imu_state(X)/1e6)
-            fprintf('Total Data Produced: %0.0f Mb\n', dataProd/1e6)
-            fprintf('Data Transmitted, to date: %0.0f Mb\n', imu_state(X)/1e6);
-            fprintf('Time: %f days\n', 1+t2(X)/DAYTOSEC);
+            fprintf('Data Produced by IMU: %0.3f Mb\n', imu_state(X)/1000000)
+            fprintf('Total Data Produced, to date: %0.3f Mb\n', dataProd/1000000)
+            fprintf('Data Transmitted, to date: %0.3f Mb\n', imu_state(X)/1000000);
+            fprintf('Time: %0.00f days\n', 1+t2(X)/DAYTOSEC);
             imu_state_fmsc = imu_state(X);
             at_fmsc_imu=1;
         end
@@ -352,7 +353,7 @@ for X=1:steps
         if (at_fmsc_rad==0 && camera_counter == 3)
                 % 3 orbits have now passed --> FMSC for Rad Sensors
                 rad_state_fmsc = rad_state(X);
-                fprintf('FMSC Radiation Data: %0.0f bits\n', rad_state_fmsc)
+                fprintf('FMSC for Radiation Data: %.3f Mb\n', rad_state_fmsc/1000000)
                 at_fmsc_rad=1;
         end
 
@@ -477,11 +478,11 @@ fprintf('\nOutputing data to text file\n');
 %     fprintf(fid,'%f\t%d\t%f\t%f\t%f\n',OrbitalData(X,1),in_shadow(X),pow_draw*3600/time_step,temp_pow(X)*3600/time_step,rad(X));
 % end
 fclose(fid);
-fprintf('\nMax Data State: %f kB',max(dataStore_state)/8000)
-fprintf('\nIMU Draw Time: %f min\n',pull_time/60)
-fprintf('\nTotal Data Produced: %f kB',dataProd/8000)
-fprintf('\nTotal Data Downlinked: %f kB',dataTrans/8000)
-fprintf('\nTotal Data Delta: %f kB\n\n',(dataProd-dataTrans)/8000)
+fprintf('\nMax Data State: %.3f kB',max(dataStore_state)/8000)
+fprintf('\nIMU Draw Time: %.3f min\n',pull_time/60)
+fprintf('\nTotal Data Produced: %.3f kB',dataProd/8000)
+fprintf('\nTotal Data Downlinked: %.3f kB',dataTrans/8000)
+fprintf('\nTotal Data Delta: %.3f kB\n\n',(dataProd-dataTrans)/8000)
 fprintf('FMSC Data Volumes:\n')
 fprintf('IMU: %0.3f Mb\n',imu_state_fmsc/1e6)
 fprintf('Cameras: %0.3f Mb\n',cam_fmsc/1e6)
@@ -496,29 +497,29 @@ stateFile = 'DITL_comp345_cam-1pics-8thumbs-2wk_imu-all_init9-0pics.csv';
 csvwrite(stateFile,stateData)
 
 % %Big Plot
-figure(1)
-subplot(5,1,1)
-plot(1+t2/DAYTOSEC,imu_on)
-title('IMU Data Gathering')
-ylabel('State');
-subplot(5,1,2)
-plot(1+t2/DAYTOSEC,in_shadow)
-title('Satellite in Shadow')
-ylabel('State');
-subplot(5,1,3)
-plot(1+t2/DAYTOSEC,dataStore_state)
-title('Data Stored')
-ylabel('Data (bits)')
-subplot(5,1,4)
-plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-title('Transmitting')
-ylabel('Flag')
-subplot(5,1,5)
-plot(1+t2/DAYTOSEC,power_state)
-title('Power State')
-xlabel('Time (Days)')
-ylabel('Energy (Watt-hours)')
-
+% figure(1)
+% subplot(5,1,1)
+% plot(1+t2/DAYTOSEC,imu_on)
+% title('IMU Data Gathering')
+% ylabel('State');
+% subplot(5,1,2)
+% plot(1+t2/DAYTOSEC,in_shadow)
+% title('Satellite in Shadow')
+% ylabel('State');
+% subplot(5,1,3)
+% plot(1+t2/DAYTOSEC,dataStore_state)
+% title('Data Stored')
+% ylabel('Data (bits)')
+% subplot(5,1,4)
+% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+% title('Transmitting')
+% ylabel('Flag')
+% subplot(5,1,5)
+% plot(1+t2/DAYTOSEC,power_state)
+% title('Power State')
+% xlabel('Time (Days)')
+% ylabel('Energy (Watt-hours)')
+% 
 % %Breakout Plots
 % figure(2)
 % title('Orbital Position (2D Projection)');
@@ -553,14 +554,18 @@ set(gca,'FontSize',16)
 xloc=2;
 yloc=max(dataStore_state)*0.98;
 text(xloc,yloc+2e6,'Note: Memory Storage Maximum is 2.56e+11 bits.','FontSize',14)
+
 figure(7)
+hold on
 plot(1+t2/DAYTOSEC,dataTrans_state, 1+t2/DAYTOSEC,dataProd_state)
+line([0, 1+t2(end)/DAYTOSEC], [total_fmsc, total_fmsc], 'Color','red','LineStyle','--', 'LineWidth', 0.5)
 title('Total Data Transmitted Compared to Production')
 xlabel('Time (Days)')
 ylabel('Data (bits)')
 legend('Total Data Transmitted', 'Total Data Produced','Location','northwest')
 grid on
 set(gca,'FontSize',16)
+
 figure(8)
 hold on
 plot(1+t2/DAYTOSEC,dataProd_state)
@@ -575,8 +580,8 @@ legend('Total Data Produced', 'Cameras', 'IMU', 'Radiation Sensors', 'Telemetry'
 grid on
 set(gca,'FontSize',16)
 hold off
-fprintf('DO THE TOTALS MATCH?')
-total = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
+fprintf('Check that the subsystems total matches total data produced:')
+subsystems_sum = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
 final_data_production_total = dataProd_state(X)
 
 figure(9)
