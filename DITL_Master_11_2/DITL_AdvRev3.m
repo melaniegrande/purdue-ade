@@ -180,7 +180,7 @@ pe=zeros(1,steps);
 loc=zeros(2,steps);
    %%% DATACOUNT IS DEFINED BY THE INITIAL THUMBNAILS, IMU DATA, AND OTHER
    %%% CHECKOUT DATA
-dataCount= floor((2.293e5) / encFactor); %Goes up with imu_on, down with in_tmrange on
+dataCount= 0.383e6; %Will go up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
 dataStore_state=zeros(1,steps);
@@ -216,7 +216,7 @@ end
 t2=0:time_step:(steps-1)*time_step;
 
 % Cadence definition:
-cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
+cadence = 1;  % Camera cadence: 1x run per X days
 cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
 cad_shift1 = [0; cad_counts];
 cad_shift2 = [cad_counts; max(cad_shift1)];
@@ -275,8 +275,8 @@ for X=1:steps
         if(orbStartFlag && picsTaken==0)
             % If the camera has taken less 5 photos [0:4]
             if (camera_counter < 5)
-                picsTaken=1  % Take only one set of photos per orbit
-                camera_counter=camera_counter+1
+                picsTaken=1;  % Take only one set of photos per orbit
+                camera_counter=camera_counter+1;
                 dataCount=dataCount + floor(picDelta/encFactor);
                 dataProd=dataProd + floor(picDelta/encFactor);
                 picTotal = picTotal + floor(picDelta/encFactor);
@@ -340,7 +340,7 @@ for X=1:steps
         if(imu_on(X))
            dataCount=dataCount + floor(imuDelta*compRatio*discComp/encFactor);
            dataProd=dataProd + floor(imuDelta*compRatio*discComp/encFactor);
-           imuTotal = imuTotal +  floor(imuDelta*compRatio/encFactor);  % Running total of specifically IMU data
+           imuTotal = imuTotal +  floor(imuDelta*compRatio*discComp/encFactor);  % Running total of specifically IMU data
         end
         imu_state(X) = imuTotal;
         dataCount=dataCount + floor((telemDelta+radDelta)*compRatio/encFactor);
@@ -350,17 +350,20 @@ for X=1:steps
         if (at_fmsc_rad==0 && camera_counter == 3)
                 % 3 orbits have now passed --> FMSC for Rad Sensors
                 rad_state_fmsc = rad_state(X);
-                fprintf('FMSC for Radiation Data: %.3f Mb\n', rad_state_fmsc/1000000)
+                fprintf('\nFMSC for Radiation Data: %.3f Mb\n', rad_state_fmsc/1000000)
                 at_fmsc_rad=1;
         end
 
         %Downlink data if possible
-        if(in_tmrange(X) && ~safe_flag && dataCount>bit_rate)
+        if(in_tmrange(X) && ~safe_flag && dataCount>0)
              dataCount=dataCount-bit_rate;
-             dataTrans=dataTrans+bit_rate;
-        end
-        if(dataCount<0)
-            dataCount=0;
+             if dataCount<0
+                 dataCount = 0;
+                 trans = bit_rate - dataCount;
+                 dataTrans=dataTrans + trans;
+             else
+                dataTrans=dataTrans+bit_rate;
+             end
         end
         
         %Update Data State
@@ -370,8 +373,7 @@ for X=1:steps
         dataTrans_state(X) = dataTrans;  % Total data transmitted up to this time_step
         
         if (at_fmsc_imu==0 && camera_counter == 5)
-            fprintf('\nFMSC for IMU (1st 5 orbits)\n')
-            fprintf('Data Produced by IMU: %0.3f Mb\n', imu_state(X)/1000000)
+            fprintf('FMSC for IMU: %0.3f Mb\n', imu_state(X)/1000000)
             fprintf('Total Data Produced, to date: %0.3f Mb\n', dataProd_state(X)/1000000)
             fprintf('Data Transmitted, to date: %0.3f Mb\n', dataTrans_state(X)/1000000);
             fprintf('Time: %0.2f days\n', 1+t2(X)/DAYTOSEC);
@@ -488,9 +490,9 @@ fprintf('\nOutputing data to text file\n');
 fclose(fid);
 fprintf('\nMax Data State: %.3f kB',max(dataStore_state)/8000)
 fprintf('\nIMU Draw Time: %.3f min\n',pull_time/60)
-fprintf('\nTotal Data Produced: %.3f kB',dataProd/8000)
+fprintf('\nTotal Data Produced: %.3f kB',dataProd_state(end)/8000)
 fprintf('\nTotal Data Downlinked: %.3f kB',dataTrans/8000)
-fprintf('\nTotal Data Delta: %.3f kB\n\n',(dataProd-dataTrans)/8000)
+fprintf('\nTotal Data Delta: %.3f kB\n\n',(dataProd_state(end)-dataTrans)/8000)
 fprintf('FMSC Data Volumes:\n')
 fprintf('IMU: %0.3f Mb\n',imu_state_fmsc/1e6)
 fprintf('Cameras: %0.3f Mb\n',cam_fmsc/1e6)
@@ -528,7 +530,7 @@ title('Power State')
 xlabel('Time (Days)')
 ylabel('Energy (Watt-hours)')
 % 
-% %Breakout Plots
+%Breakout Plots
 % figure(2)
 % title('Orbital Position (2D Projection)');
 % x=loc(1,:).*cos(loc(2,:));
@@ -551,7 +553,6 @@ ylabel('Energy (Watt-hours)')
 % xlabel('Time (Days)')
 % ylabel('State');
 
-   %%%  COMPARE DATA STATE TO MEMORY MAX, AND DATA TRANSMITTED TO DATA PRODUCED
 figure(6)
 plot(1+t2/DAYTOSEC,dataStore_state)
 title('Data Stored')
@@ -592,20 +593,20 @@ fprintf('Check that the subsystems total matches total data produced:')
 subsystems_sum = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
 final_data_production_total = dataProd_state(X)
 
-figure(9)
-plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-title('Transmitting')
-xlabel('Time (Days)')
-ylabel('Flag')
-figure(10)
-plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
-ylim([0,1.1*max(power_state)]);
-if strcmp(sim_case,'Average')
-    title('Power State - Average Deorbit Case','FontSize',20)
-elseif strcmp(sim_case,'Max')
-    title('Power State - Max Deorbit Case','FontSize',20)
-elseif strcmp(sim_case,'Min')
-    title('Power State - Min Deorbit Case','FontSize',20)
-end
-xlabel('Time (Days)','FontSize',20)
-ylabel('Energy (Watt-hours)','FontSize',20)    
+% figure(9)
+% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+% title('Transmitting')
+% xlabel('Time (Days)')
+% ylabel('Flag')
+% figure(10)
+% plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
+% ylim([0,1.1*max(power_state)]);
+% if strcmp(sim_case,'Average')
+%     title('Power State - Average Deorbit Case','FontSize',20)
+% elseif strcmp(sim_case,'Max')
+%     title('Power State - Max Deorbit Case','FontSize',20)
+% elseif strcmp(sim_case,'Min')
+%     title('Power State - Min Deorbit Case','FontSize',20)
+% end
+% xlabel('Time (Days)','FontSize',20)
+% ylabel('Energy (Watt-hours)','FontSize',20)    
