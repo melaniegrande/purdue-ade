@@ -38,6 +38,12 @@ sim_case = 'Average';
 % sim_case = 'Max';
 % sim_case = 'Min';
 
+%Set slant range case (0 = current estimates, 1 = estimates based on
+%CalPoly heritage of ~3000km)
+global short_slant
+short_slant = 0;
+%short_slant = 1;
+
 %Constants:
 DEGTORAD=pi/180;
 RADTODEG=180/pi;
@@ -84,12 +90,12 @@ spfail_modes = [1,1,1,1];
 
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
-picDelta=0*900000*8+8*1000*8; %bits,Amount of data we are gathering from each apoapsis picture sessionimuPull =352; %bits/pull,Amount of data we are gathering per data pull (Max Case)
+picDelta=8*1000*8; %bits, One thumbnail
 picDelta_full = 1*900000*8;  %bits; One full size photo
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
 discComp = 0.25;  % Discretization of IMU data
-imuPull = 352*discComp;  % bits/pull
+imuPull = 352;  % bits/pull
 imuFreq=10; %Hz (pull/sec)
 imuDelta=imuPull*imuFreq*time_step; %bits, Amount of data gathered per time_step
    %%% DEFINED RADIATION PULL, DELTA
@@ -174,7 +180,7 @@ pe=zeros(1,steps);
 loc=zeros(2,steps);
    %%% DATACOUNT IS DEFINED BY THE INITIAL THUMBNAILS, IMU DATA, AND OTHER
    %%% CHECKOUT DATA
-dataCount= floor((2.293e5) / encFactor); %Goes up with imu_on, down with in_tmrange on
+dataCount= 0.383e6; %Will go up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
 dataStore_state=zeros(1,steps);
@@ -210,7 +216,7 @@ end
 t2=0:time_step:(steps-1)*time_step;
 
 % Cadence definition:
-cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
+cadence = 1;  % Camera cadence: 1x run per X days
 cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
 cad_shift1 = [0; cad_counts];
 cad_shift2 = [cad_counts; max(cad_shift1)];
@@ -258,8 +264,8 @@ for X=1:steps
         end
                 
         
-        %Check to see if we are close to apoapsis for pictures
-        % Option A, Cadence: Images for 1st 5 orbits, then only once per [2] week(s)
+        %   Check to see if we are close to apoapsis for pictures
+        % Option A, Camera Cadence: Images for 1st 5 orbits, then only once per [1] week(s)
         % MRT Note: This flag to check near apoapsis only checks if you're
         % at a point greater than halfway through your orbit in mean
         % anomaly.  That's incorrect for an apoapsis check.  It was also
@@ -267,23 +273,28 @@ for X=1:steps
         % for now.
         %if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
         if(orbStartFlag && picsTaken==0)
-            % If the camera has taken less 5 photos [0:4]
-            if (camera_counter < 5)
-                picsTaken=1  % Take only one set of photos per orbit
-                camera_counter=camera_counter+1
-                dataCount=dataCount + floor(picDelta/encFactor);
-                dataProd=dataProd + floor(picDelta/encFactor);
-                picTotal = picTotal + floor(picDelta/encFactor);
-            elseif X == cad_starts(cad_iter)
-                dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
-                dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
-                picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
-                cad_iter=cad_iter+1;
-                camera_counter=camera_counter+1;
-            end
+            picsTaken=1;  % Take only one set of photos per orbit
+            dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
+            dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
+            picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
+            camera_counter=camera_counter+1;
+%             % If the camera has taken less 5 photos [0:4]
+%             if (camera_counter < 5)
+%                 picsTaken=1;  % Take only one set of photos per orbit
+%                 camera_counter=camera_counter+1;
+%                 dataCount=dataCount + floor(picDelta/encFactor);
+%                 dataProd=dataProd + floor(picDelta/encFactor);
+%                 picTotal = picTotal + floor(picDelta/encFactor);
+%             elseif X == cad_starts(cad_iter)
+%                 dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
+%                 dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
+%                 picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
+%                 cad_iter=cad_iter+1;
+%                 camera_counter=camera_counter+1;
+%             end
         end
          
-        % Option B, Cadence: 5 orbits on, 5 off:
+        % Option B, Camera Cadence: 5 orbits on, 5 off:
 %         if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
 %             if skip == 0
 %                 picsTaken=1;  % Take only one set of photos per orbit
@@ -332,45 +343,48 @@ for X=1:steps
 
         % Update data stored first
         if(imu_on(X))
-           dataCount=dataCount + floor(imuDelta*compRatio/encFactor);
-           dataProd=dataProd + floor(imuDelta*compRatio/encFactor);
-           imuTotal = imuTotal + floor(imuDelta*compRatio/encFactor);  % Running total of specifically IMU datae
+           dataCount=dataCount + floor(imuDelta*compRatio*discComp/encFactor);
+           dataProd=dataProd + floor(imuDelta*compRatio*discComp/encFactor);
+           imuTotal = imuTotal +  floor(imuDelta*compRatio*discComp/encFactor);  % Running total of specifically IMU data
         end
         imu_state(X) = imuTotal;
-        if (at_fmsc_imu==0 && camera_counter == 5)
-            fprintf('\nFMSC for IMU (1st 5 orbits)\n')
-            fprintf('Data Produced by IMU: %0.3f Mb\n', imu_state(X)/1000000)
-            fprintf('Total Data Produced, to date: %0.3f Mb\n', dataProd/1000000)
-            fprintf('Data Transmitted, to date: %0.3f Mb\n', imu_state(X)/1000000);
-            fprintf('Time: %0.00f days\n', 1+t2(X)/DAYTOSEC);
-            imu_state_fmsc = imu_state(X);
-            at_fmsc_imu=1;
-        end
         dataCount=dataCount + floor((telemDelta+radDelta)*compRatio/encFactor);
         dataProd=dataProd + floor((telemDelta+radDelta)*compRatio/encFactor);
-        %%% is 'steps' (X) the number of minutes that have passed???
         rad_state(X) = X * floor(radDelta*compRatio/encFactor);
         telem_state(X) = X * floor(telemDelta*compRatio/encFactor);
         if (at_fmsc_rad==0 && camera_counter == 3)
                 % 3 orbits have now passed --> FMSC for Rad Sensors
                 rad_state_fmsc = rad_state(X);
-                fprintf('FMSC for Radiation Data: %.3f Mb\n', rad_state_fmsc/1000000)
+                fprintf('\nFMSC for Radiation Data: %.3f Mb\n', rad_state_fmsc/1000000)
                 at_fmsc_rad=1;
         end
 
         %Downlink data if possible
-        if(in_tmrange(X) && ~safe_flag && dataCount>bit_rate)
+        if(in_tmrange(X) && ~safe_flag && dataCount>0)
              dataCount=dataCount-bit_rate;
-             dataTrans=dataTrans+bit_rate;
-        end
-        if(dataCount<0)
-            dataCount=0;
+             if dataCount<0
+                 dataCount = 0;
+                 trans = bit_rate - dataCount;
+                 dataTrans=dataTrans + trans;
+             else
+                dataTrans=dataTrans+bit_rate;
+             end
         end
         
         %Update Data State
         dataStore_state(X) = dataCount;
-        dataProd_state(X) = dataProd;  % Total data produced up to this time_step
+%         dataProd_state(X) = dataProd;  % Total data produced up to this time_step
+        dataProd_state(X) = imu_state(X) + pic_state(X) + rad_state(X) + telem_state(X);  % Total data produced up to this time_step
         dataTrans_state(X) = dataTrans;  % Total data transmitted up to this time_step
+        
+        if (at_fmsc_imu==0 && camera_counter == 5)
+            fprintf('FMSC for IMU: %0.3f Mb\n', imu_state(X)/1000000)
+            fprintf('Total Data Produced, to date: %0.3f Mb\n', dataProd_state(X)/1000000)
+            fprintf('Data Transmitted, to date: %0.3f Mb\n', dataTrans_state(X)/1000000);
+            fprintf('Time: %0.2f days\n', 1+t2(X)/DAYTOSEC);
+            imu_state_fmsc = imu_state(X);
+            at_fmsc_imu=1;
+        end
 
         %Update battery count
         if batt_failtimes(batt_iter) == X
@@ -449,7 +463,7 @@ for X=1:steps
                 orbStart=time;
                 picsTaken=0;  %Reset to zero at beginning of new orbit
                 % camera_counter is a running total of times camera has been turned on
-                orbit_number = 1;
+%                 orbit_number = 1;
                 orbCounter = orbCounter+1; % Running total of orbits
             end
         else
@@ -481,9 +495,9 @@ fprintf('\nOutputing data to text file\n');
 fclose(fid);
 fprintf('\nMax Data State: %.3f kB',max(dataStore_state)/8000)
 fprintf('\nIMU Draw Time: %.3f min\n',pull_time/60)
-fprintf('\nTotal Data Produced: %.3f kB',dataProd/8000)
+fprintf('\nTotal Data Produced: %.3f kB',dataProd_state(end)/8000)
 fprintf('\nTotal Data Downlinked: %.3f kB',dataTrans/8000)
-fprintf('\nTotal Data Delta: %.3f kB\n\n',(dataProd-dataTrans)/8000)
+fprintf('\nTotal Data Delta: %.3f kB\n\n',(dataProd_state(end)-dataTrans)/8000)
 fprintf('FMSC Data Volumes:\n')
 fprintf('IMU: %0.3f Mb\n',imu_state_fmsc/1e6)
 fprintf('Cameras: %0.3f Mb\n',cam_fmsc/1e6)
@@ -497,31 +511,31 @@ stateData = [(1+t2/DAYTOSEC)', dataProd_state.', dataTrans_state.', dataStore_st
 stateFile = 'DITL_comp345_cam-1pics-8thumbs-2wk_imu-all_init9-0pics.csv';
 csvwrite(stateFile,stateData)
 
-% %Big Plot
-% figure(1)
-% subplot(5,1,1)
-% plot(1+t2/DAYTOSEC,imu_on)
-% title('IMU Data Gathering')
-% ylabel('State');
-% subplot(5,1,2)
-% plot(1+t2/DAYTOSEC,in_shadow)
-% title('Satellite in Shadow')
-% ylabel('State');
-% subplot(5,1,3)
-% plot(1+t2/DAYTOSEC,dataStore_state)
-% title('Data Stored')
-% ylabel('Data (bits)')
-% subplot(5,1,4)
-% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-% title('Transmitting')
-% ylabel('Flag')
-% subplot(5,1,5)
-% plot(1+t2/DAYTOSEC,power_state)
-% title('Power State')
-% xlabel('Time (Days)')
-% ylabel('Energy (Watt-hours)')
+%Big Plot
+figure(1)
+subplot(5,1,1)
+plot(1+t2/DAYTOSEC,imu_on)
+title('IMU Data Gathering')
+ylabel('State');
+subplot(5,1,2)
+plot(1+t2/DAYTOSEC,in_shadow)
+title('Satellite in Shadow')
+ylabel('State');
+subplot(5,1,3)
+plot(1+t2/DAYTOSEC,dataStore_state)
+title('Data Stored')
+ylabel('Data (bits)')
+subplot(5,1,4)
+plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+title('Transmitting')
+ylabel('Flag')
+subplot(5,1,5)
+plot(1+t2/DAYTOSEC,power_state)
+title('Power State')
+xlabel('Time (Days)')
+ylabel('Energy (Watt-hours)')
 % 
-% %Breakout Plots
+%Breakout Plots
 % figure(2)
 % title('Orbital Position (2D Projection)');
 % x=loc(1,:).*cos(loc(2,:));
@@ -544,7 +558,6 @@ csvwrite(stateFile,stateData)
 % xlabel('Time (Days)')
 % ylabel('State');
 
-   %%%  COMPARE DATA STATE TO MEMORY MAX, AND DATA TRANSMITTED TO DATA PRODUCED
 figure(6)
 plot(1+t2/DAYTOSEC,dataStore_state)
 title('Data Stored')
@@ -585,20 +598,20 @@ fprintf('Check that the subsystems total matches total data produced:')
 subsystems_sum = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
 final_data_production_total = dataProd_state(X)
 
-figure(9)
-plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-title('Transmitting')
-xlabel('Time (Days)')
-ylabel('Flag')
-figure(10)
-plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
-ylim([0,1.1*max(power_state)]);
-if strcmp(sim_case,'Average')
-    title('Power State - Average Deorbit Case','FontSize',20)
-elseif strcmp(sim_case,'Max')
-    title('Power State - Max Deorbit Case','FontSize',20)
-elseif strcmp(sim_case,'Min')
-    title('Power State - Min Deorbit Case','FontSize',20)
-end
-xlabel('Time (Days)','FontSize',20)
-ylabel('Energy (Watt-hours)','FontSize',20)    
+% figure(9)
+% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+% title('Transmitting')
+% xlabel('Time (Days)')
+% ylabel('Flag')
+% figure(10)
+% plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
+% ylim([0,1.1*max(power_state)]);
+% if strcmp(sim_case,'Average')
+%     title('Power State - Average Deorbit Case','FontSize',20)
+% elseif strcmp(sim_case,'Max')
+%     title('Power State - Max Deorbit Case','FontSize',20)
+% elseif strcmp(sim_case,'Min')
+%     title('Power State - Min Deorbit Case','FontSize',20)
+% end
+% xlabel('Time (Days)','FontSize',20)
+% ylabel('Energy (Watt-hours)','FontSize',20)    

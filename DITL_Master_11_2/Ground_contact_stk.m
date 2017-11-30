@@ -15,13 +15,20 @@ function [ conn,run ] = Ground_contact_stk( startdate,enddate )
 %which is better for you we can discuss tomorrow. thanks for understanding
 %about not meeting today
 
-global sim_case
+global sim_case short_slant
 
 % Creates variables based on the global variable sim_case
-Cal = csvread(['CalPolycontact - ', sim_case, '.csv'],1,0); %takes excel data calpoly
-Purdue = csvread(['Purduecontact - ', sim_case, '.csv'],1,0); %takes excel data purdue
-ASU = csvread(['ASUcontact - ', sim_case, '.csv'],1,0); %takes excel data
-Tech = csvread(['GaTechcontact - ', sim_case, '.csv'],1,0); %takes excel data
+if short_slant
+    Cal = csvread(['CalPolycontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data calpoly
+    Purdue = csvread(['Purduecontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data purdue
+    ASU = csvread(['ASUcontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data
+    Tech = csvread(['GaTechcontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data
+else
+    Cal = csvread(['CalPolycontact - ', sim_case, '.csv'],1,0); %takes excel data calpoly
+    Purdue = csvread(['Purduecontact - ', sim_case, '.csv'],1,0); %takes excel data purdue
+    ASU = csvread(['ASUcontact - ', sim_case, '.csv'],1,0); %takes excel data
+    Tech = csvread(['GaTechcontact - ', sim_case, '.csv'],1,0); %takes excel data    
+end
 julianseconds = (((1/24)/60)/60); %creates seconds in julian time
 step = julianseconds*60; % 60 second step
 step60 = 60; % minimum contact duration
