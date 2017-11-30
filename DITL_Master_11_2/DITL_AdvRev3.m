@@ -273,20 +273,25 @@ for X=1:steps
         % for now.
         %if(orbStartFlag && picsTaken==0 && DAYTOSEC*(time-orbStart)>period/2)
         if(orbStartFlag && picsTaken==0)
-            % If the camera has taken less 5 photos [0:4]
-            if (camera_counter < 5)
-                picsTaken=1;  % Take only one set of photos per orbit
-                camera_counter=camera_counter+1;
-                dataCount=dataCount + floor(picDelta/encFactor);
-                dataProd=dataProd + floor(picDelta/encFactor);
-                picTotal = picTotal + floor(picDelta/encFactor);
-            elseif X == cad_starts(cad_iter)
-                dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
-                dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
-                picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
-                cad_iter=cad_iter+1;
-                camera_counter=camera_counter+1;
-            end
+            picsTaken=1;  % Take only one set of photos per orbit
+            dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
+            dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
+            picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
+            camera_counter=camera_counter+1;
+%             % If the camera has taken less 5 photos [0:4]
+%             if (camera_counter < 5)
+%                 picsTaken=1;  % Take only one set of photos per orbit
+%                 camera_counter=camera_counter+1;
+%                 dataCount=dataCount + floor(picDelta/encFactor);
+%                 dataProd=dataProd + floor(picDelta/encFactor);
+%                 picTotal = picTotal + floor(picDelta/encFactor);
+%             elseif X == cad_starts(cad_iter)
+%                 dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
+%                 dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
+%                 picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
+%                 cad_iter=cad_iter+1;
+%                 camera_counter=camera_counter+1;
+%             end
         end
          
         % Option B, Camera Cadence: 5 orbits on, 5 off:
