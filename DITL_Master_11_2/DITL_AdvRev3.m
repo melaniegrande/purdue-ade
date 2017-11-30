@@ -83,7 +83,7 @@ safe_flag = 0;
 
 %Failure Modes 
 global spfail_modes
-spfail_modes = [1,1,1,1];
+spfail_modes = [1,0,1,1];
 % solar panels (x y -x -y)
 %(1 = both panels on one side operational
 %(0 = no panels on one side operational)
