@@ -216,7 +216,7 @@ end
 t2=0:time_step:(steps-1)*time_step;
 
 % Cadence definition:
-cadence = 7 * (1);  % Camera cadence: 1x per [X] weeks
+cadence = 7 * (2);  % Camera cadence: 1x per [X] weeks
 cad_counts = floor((OrbitalData(:,1)-OrbitalData(1,1))/cadence);
 cad_shift1 = [0; cad_counts];
 cad_shift2 = [cad_counts; max(cad_shift1)];
@@ -236,7 +236,7 @@ at_fmsc_imu=0; % Y:1, N:0
 for X=1:steps
         %Update current state
         %Check to see if we are close to periapsis for IMU data
-        if(orbStartFlag && (DAYTOSEC*(time-orbStart)<pull_time/2 || period-DAYTOSEC*(time-orbStart)<pull_time/2))
+        if(orbStartFlag && (DAYTOSEC*(time-orbStart)<pull_time/2 || period-DAYTOSEC*(time-orbStart)<pull_time/2) && ~safe_flag)
 %             % Logic turns on IMU only if it's at the beginning of an orbit?
 %             % && if within +/- 1/2 pull_time on either side of periapsis
             imu_on(X)=1;
