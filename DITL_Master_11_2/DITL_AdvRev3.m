@@ -91,7 +91,7 @@ spfail_modes = [1,0,1,1];
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
 picDelta=8*1000*8; %bits, One thumbnail
-picDelta_full = 1*900000*8;  %bits; One full size photo
+picDelta_full = 0*900000*8;  %bits; One full size photo
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
 discComp = 0.25;  % Discretization of IMU data
