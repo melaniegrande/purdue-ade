@@ -279,11 +279,11 @@ for X=1:steps
                 camera_counter=camera_counter+1
                 dataCount=dataCount + floor(picDelta/encFactor);
                 dataProd=dataProd + floor(picDelta/encFactor);
-                picTotal = picTotal + picDelta;
+                picTotal = picTotal + floor(picDelta/encFactor);
             elseif X == cad_starts(cad_iter)
                 dataCount=dataCount + floor((picDelta + picDelta_full)/encFactor);
                 dataProd=dataProd + floor((picDelta + picDelta_full)/encFactor);
-                picTotal = picTotal + picDelta + picDelta_full;
+                picTotal = picTotal + floor((picDelta + picDelta_full)/encFactor);
                 cad_iter=cad_iter+1;
                 camera_counter=camera_counter+1;
             end
@@ -340,13 +340,13 @@ for X=1:steps
         if(imu_on(X))
            dataCount=dataCount + floor(imuDelta*compRatio*discComp/encFactor);
            dataProd=dataProd + floor(imuDelta*compRatio*discComp/encFactor);
-           imuTotal = imuTotal + imuDelta;  % Running total of specifically IMU data
+           imuTotal = imuTotal +  floor(imuDelta*compRatio/encFactor);  % Running total of specifically IMU data
         end
         imu_state(X) = imuTotal;
         dataCount=dataCount + floor((telemDelta+radDelta)*compRatio/encFactor);
         dataProd=dataProd + floor((telemDelta+radDelta)*compRatio/encFactor);
-        rad_state(X) = X * radDelta;
-        telem_state(X) = X * telemDelta;
+        rad_state(X) = X * floor(radDelta*compRatio/encFactor);
+        telem_state(X) = X * floor(telemDelta*compRatio/encFactor);
         if (at_fmsc_rad==0 && camera_counter == 3)
                 % 3 orbits have now passed --> FMSC for Rad Sensors
                 rad_state_fmsc = rad_state(X);
@@ -365,6 +365,7 @@ for X=1:steps
         
         %Update Data State
         dataStore_state(X) = dataCount;
+%         dataProd_state(X) = dataProd;  % Total data produced up to this time_step
         dataProd_state(X) = imu_state(X) + pic_state(X) + rad_state(X) + telem_state(X);  % Total data produced up to this time_step
         dataTrans_state(X) = dataTrans;  % Total data transmitted up to this time_step
         
@@ -455,7 +456,7 @@ for X=1:steps
                 orbStart=time;
                 picsTaken=0;  %Reset to zero at beginning of new orbit
                 % camera_counter is a running total of times camera has been turned on
-                orbit_number = 1;
+%                 orbit_number = 1;
                 orbCounter = orbCounter+1; % Running total of orbits
             end
         else
@@ -503,29 +504,29 @@ stateData = [(1+t2/DAYTOSEC)', dataProd_state.', dataTrans_state.', dataStore_st
 stateFile = 'DITL_comp345_cam-1pics-8thumbs-2wk_imu-all_init9-0pics.csv';
 csvwrite(stateFile,stateData)
 
-% %Big Plot
-% figure(1)
-% subplot(5,1,1)
-% plot(1+t2/DAYTOSEC,imu_on)
-% title('IMU Data Gathering')
-% ylabel('State');
-% subplot(5,1,2)
-% plot(1+t2/DAYTOSEC,in_shadow)
-% title('Satellite in Shadow')
-% ylabel('State');
-% subplot(5,1,3)
-% plot(1+t2/DAYTOSEC,dataStore_state)
-% title('Data Stored')
-% ylabel('Data (bits)')
-% subplot(5,1,4)
-% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-% title('Transmitting')
-% ylabel('Flag')
-% subplot(5,1,5)
-% plot(1+t2/DAYTOSEC,power_state)
-% title('Power State')
-% xlabel('Time (Days)')
-% ylabel('Energy (Watt-hours)')
+%Big Plot
+figure(1)
+subplot(5,1,1)
+plot(1+t2/DAYTOSEC,imu_on)
+title('IMU Data Gathering')
+ylabel('State');
+subplot(5,1,2)
+plot(1+t2/DAYTOSEC,in_shadow)
+title('Satellite in Shadow')
+ylabel('State');
+subplot(5,1,3)
+plot(1+t2/DAYTOSEC,dataStore_state)
+title('Data Stored')
+ylabel('Data (bits)')
+subplot(5,1,4)
+plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+title('Transmitting')
+ylabel('Flag')
+subplot(5,1,5)
+plot(1+t2/DAYTOSEC,power_state)
+title('Power State')
+xlabel('Time (Days)')
+ylabel('Energy (Watt-hours)')
 % 
 % %Breakout Plots
 % figure(2)
@@ -591,20 +592,20 @@ fprintf('Check that the subsystems total matches total data produced:')
 subsystems_sum = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
 final_data_production_total = dataProd_state(X)
 
-% figure(9)
-% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-% title('Transmitting')
-% xlabel('Time (Days)')
-% ylabel('Flag')
-% figure(10)
-% plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
-% ylim([0,1.1*max(power_state)]);
-% if strcmp(sim_case,'Average')
-%     title('Power State - Average Deorbit Case','FontSize',20)
-% elseif strcmp(sim_case,'Max')
-%     title('Power State - Max Deorbit Case','FontSize',20)
-% elseif strcmp(sim_case,'Min')
-%     title('Power State - Min Deorbit Case','FontSize',20)
-% end
-% xlabel('Time (Days)','FontSize',20)
-% ylabel('Energy (Watt-hours)','FontSize',20)    
+figure(9)
+plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+title('Transmitting')
+xlabel('Time (Days)')
+ylabel('Flag')
+figure(10)
+plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
+ylim([0,1.1*max(power_state)]);
+if strcmp(sim_case,'Average')
+    title('Power State - Average Deorbit Case','FontSize',20)
+elseif strcmp(sim_case,'Max')
+    title('Power State - Max Deorbit Case','FontSize',20)
+elseif strcmp(sim_case,'Min')
+    title('Power State - Min Deorbit Case','FontSize',20)
+end
+xlabel('Time (Days)','FontSize',20)
+ylabel('Energy (Watt-hours)','FontSize',20)    
