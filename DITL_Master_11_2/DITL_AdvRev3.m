@@ -65,7 +65,7 @@ proc_eff = 0.97; %Production efficiency
 
 %Solar Panel Parameters
 transparency = 0.83; %Transparency of CP1
-p0 = 1.5; %Solar Panel Charge rate when sunlight is perpendicular to cell
+p0 = 1.9; %Solar Panel Charge rate when sunlight is perpendicular to cell
 
 %Power States
 % ADD SAFE MODE FOR FAILURE STATES
@@ -83,7 +83,7 @@ safe_flag = 0;
 
 %Failure Modes 
 global spfail_modes
-spfail_modes = [1,0,1,1];
+spfail_modes = [1,1,1,1];
 % solar panels (x y -x -y)
 %(1 = both panels on one side operational
 %(0 = no panels on one side operational)
