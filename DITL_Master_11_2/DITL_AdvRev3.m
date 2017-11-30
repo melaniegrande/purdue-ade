@@ -156,7 +156,7 @@ fid=fopen('Data.txt','w');
 steps=length(OrbitalData(:,10));
 
 %Battery failure modeling
-batt_failtimes = [max(steps)+1, max(steps)+1, max(steps)+1];
+batt_failtimes = [max(steps)+1, max(steps)+1];
 batt_iter = 1;
 % Battery fail times are in terms of "steps". If the value in
 % batt_failtimes is > than the max value of steps, the battery will not
