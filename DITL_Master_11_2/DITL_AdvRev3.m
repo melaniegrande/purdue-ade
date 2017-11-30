@@ -65,7 +65,7 @@ proc_eff = 0.97; %Production efficiency
 
 %Solar Panel Parameters
 transparency = 0.83; %Transparency of CP1
-p0 = 1.5; %Solar Panel Charge rate when sunlight is perpendicular to cell
+p0 = 1.9; %Solar Panel Charge rate when sunlight is perpendicular to cell
 
 %Power States
 % ADD SAFE MODE FOR FAILURE STATES
