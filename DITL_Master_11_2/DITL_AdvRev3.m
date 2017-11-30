@@ -90,8 +90,8 @@ spfail_modes = [1,1,1,1];
 
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
-picDelta=8*1000*8; %bits, One thumbnail
-picDelta_full = 0*900000*8;  %bits; One full size photo
+picDelta=(8)*1000*8; %bits, (8) thumbnails
+picDelta_full = (0)*900000*8;  %bits; (0) full-size photos
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
 discComp = 0.25;  % Discretization of IMU data
@@ -178,9 +178,10 @@ imu_on=zeros(1,steps);
 rad=zeros(1,steps);
 pe=zeros(1,steps);
 loc=zeros(2,steps);
-   %%% DATACOUNT IS DEFINED BY THE INITIAL THUMBNAILS, IMU DATA, AND OTHER
-   %%% CHECKOUT DATA
-dataCount= 0.383e6; %Will go up with imu_on, down with in_tmrange on
+  % Data Initial Condition includes Checkout + Sail Deployment
+beaconDelta = 228*8; %bits
+dataInit = (imuDelta*discComp*compRatio + 8e3*2 + radDelta*8*compRatio + beaconDelta*compRatio)/encFactor + (imuDelta*discComp*compRatio + 8e3*14 + 2)/encFactor;  %bits
+dataCount= dataInit; %bits, Running total; will go up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
 dataStore_state=zeros(1,steps);
@@ -536,27 +537,27 @@ xlabel('Time (Days)')
 ylabel('Energy (Watt-hours)')
 % 
 %Breakout Plots
-% figure(2)
-% title('Orbital Position (2D Projection)');
-% x=loc(1,:).*cos(loc(2,:));
-% y=loc(1,:).*sin(loc(2,:));
-% plot(x,y);
-% figure(3)
-% title('Orbital Position (J2000 Frame)')
-% plot3(positionXYZ(1,:),positionXYZ(2,:),positionXYZ(3,:));
-% xlim([-50000 50000]);
-% ylim([-50000 50000]);
-% zlim([-50000 50000]);
-% figure(4)
-% plot(1+t2/DAYTOSEC,imu_on)
-% title('IMU Data Gathering')
-% ylabel('State');
-% xlabel('Time (Days)')
-% figure(5)
-% plot(1+t2/DAYTOSEC,in_shadow)
-% title('Satellite in Shadow')
-% xlabel('Time (Days)')
-% ylabel('State');
+figure(2)
+title('Orbital Position (2D Projection)');
+x=loc(1,:).*cos(loc(2,:));
+y=loc(1,:).*sin(loc(2,:));
+plot(x,y);
+figure(3)
+title('Orbital Position (J2000 Frame)')
+plot3(positionXYZ(1,:),positionXYZ(2,:),positionXYZ(3,:));
+xlim([-50000 50000]);
+ylim([-50000 50000]);
+zlim([-50000 50000]);
+figure(4)
+plot(1+t2/DAYTOSEC,imu_on)
+title('IMU Data Gathering')
+ylabel('State');
+xlabel('Time (Days)')
+figure(5)
+plot(1+t2/DAYTOSEC,in_shadow)
+title('Satellite in Shadow')
+xlabel('Time (Days)')
+ylabel('State');
 
 figure(6)
 plot(1+t2/DAYTOSEC,dataStore_state)
