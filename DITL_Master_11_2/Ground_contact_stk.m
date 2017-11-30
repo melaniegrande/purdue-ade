@@ -215,16 +215,16 @@ end
 
 figure(12)
 subplot(4,1,1)
-plot(run - run(1), Calconn)
+stairs(run - run(1), Calconn)
 title('CalPoly Contacts');
 subplot(4,1,2)
-plot(run - run(1), Purconn)
+stairs(run - run(1), Purconn)
 title('Purdue Contacts');
 subplot(4,1,3)
-plot(run - run(1), Techconn)
+stairs(run - run(1), Techconn)
 title('Georgia Tech Contacts');
 subplot(4,1,4)
-plot(run - run(1), ASUconn)
+stairs(run - run(1), ASUconn)
 title('Arizona State Contacts');
 xlabel('Time (Days)')
 

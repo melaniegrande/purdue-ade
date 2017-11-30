@@ -363,8 +363,8 @@ for X=1:steps
         if(in_tmrange(X) && ~safe_flag && dataCount>0)
              dataCount=dataCount-bit_rate;
              if dataCount<0
+                 trans = bit_rate - abs(dataCount);
                  dataCount = 0;
-                 trans = bit_rate - dataCount;
                  dataTrans=dataTrans + trans;
              else
                 dataTrans=dataTrans+bit_rate;
@@ -515,23 +515,23 @@ csvwrite(stateFile,stateData)
 figure(1)
 subplot(5,1,1)
 plot(1+t2/DAYTOSEC,imu_on)
-title('IMU Data Gathering')
+title('IMU Data Gathering','FontSize',16)
 ylabel('State');
 subplot(5,1,2)
-plot(1+t2/DAYTOSEC,in_shadow)
-title('Satellite in Shadow')
+stairs(1+t2/DAYTOSEC,in_shadow)
+title('Satellite in Shadow','FontSize',16)
 ylabel('State');
 subplot(5,1,3)
 plot(1+t2/DAYTOSEC,dataStore_state)
-title('Data Stored')
+title('Data Stored','FontSize',16)
 ylabel('Data (bits)')
 subplot(5,1,4)
-plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-title('Transmitting')
+stairs(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+title('Transmitting','FontSize',16)
 ylabel('Flag')
 subplot(5,1,5)
 plot(1+t2/DAYTOSEC,power_state)
-title('Power State')
+title('Power State','FontSize',16)
 xlabel('Time (Days)')
 ylabel('Energy (Watt-hours)')
 % 
@@ -598,20 +598,20 @@ fprintf('Check that the subsystems total matches total data produced:')
 subsystems_sum = imu_state(X)+pic_state(X)+rad_state(X)+telem_state(X)
 final_data_production_total = dataProd_state(X)
 
-% figure(9)
-% plot(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
-% title('Transmitting')
-% xlabel('Time (Days)')
-% ylabel('Flag')
-% figure(10)
-% plot(1+t2/DAYTOSEC,power_state,'LineWidth',2)
-% ylim([0,1.1*max(power_state)]);
-% if strcmp(sim_case,'Average')
-%     title('Power State - Average Deorbit Case','FontSize',20)
-% elseif strcmp(sim_case,'Max')
-%     title('Power State - Max Deorbit Case','FontSize',20)
-% elseif strcmp(sim_case,'Min')
-%     title('Power State - Min Deorbit Case','FontSize',20)
-% end
-% xlabel('Time (Days)','FontSize',20)
-% ylabel('Energy (Watt-hours)','FontSize',20)    
+figure(9)
+stairs(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
+title('Transmitting')
+xlabel('Time (Days)')
+ylabel('Flag')
+figure(10)
+plot(1+t2/DAYTOSEC,power_state,'LineWidth',1)
+ylim([0,1.1*max(power_state)]);
+if strcmp(sim_case,'Average')
+    title('Power State - Average Deorbit Case','FontSize',20)
+elseif strcmp(sim_case,'Max')
+    title('Power State - Max Deorbit Case','FontSize',20)
+elseif strcmp(sim_case,'Min')
+    title('Power State - Min Deorbit Case','FontSize',20)
+end
+xlabel('Time (Days)','FontSize',20)
+ylabel('Energy (Watt-hours)','FontSize',20)    

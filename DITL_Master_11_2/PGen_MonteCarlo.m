@@ -14,3 +14,4 @@ for i = 1:1:100000
     p_gen(i) = Power_Gen_Rev3(time_step,transparency,p0);
 end
 (3600/time_step)*mean(p_gen)
+(3600/time_step)*median(p_gen)
