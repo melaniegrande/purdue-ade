@@ -53,7 +53,6 @@ time_step=60; %in seconds
 % % Min case: 
 
 %Power Parameters
-batt_num = 2; %number of batteries at start
 batt_volt = 3.7; %Volts
 batt_amp_min = 2.52; %Amps
 batt_max = batt_volt*batt_amp_min*batt_num;%Watt-hours
@@ -90,6 +89,7 @@ spfail_modes = [1,1,1,1];
 
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
+picDelta_full = (0)*900000*8;  %bits; (0) full-size photos
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
 discComp = 0.25;  % Discretization of IMU data
@@ -176,6 +176,10 @@ imu_on=zeros(1,steps);
 rad=zeros(1,steps);
 pe=zeros(1,steps);
 loc=zeros(2,steps);
+  % Data Initial Condition includes Checkout + Sail Deployment
+beaconDelta = 228*8; %bits
+dataInit = (imuDelta*discComp*compRatio + 8e3*2 + radDelta*8*compRatio + beaconDelta*compRatio)/encFactor + (imuDelta*discComp*compRatio + 8e3*14 + 2)/encFactor;  %bits
+dataCount= dataInit; %bits, Running total; will go up with imu_on, down with in_tmrange on
 dataProd=dataCount;
 dataTrans=0;
 dataStore_state=zeros(1,steps);
@@ -424,6 +428,7 @@ for X=1:steps
             temp_pow(X)=0;
         else
             pow_hold=Power_Gen_Rev3(time_step,transparency,p0);
+            pow_cum(X) = pow_hold-pow_draw;
             if(pow_hold-pow_draw>0)
                 temp_pow(X)= proc_eff*(pow_draw+batt_eff*(pow_hold-pow_draw));
             else
@@ -481,7 +486,7 @@ for X=1:steps
         positionXYZ(:,X)=ade_pos;
 
 end
-
+pow_cum = cumsum(pow_cum);
 %Outputs
 fprintf('\nOutputing data to text file\n');
 % for X=1:steps
@@ -531,6 +536,27 @@ xlabel('Time (Days)')
 ylabel('Energy (Watt-hours)')
 % 
 %Breakout Plots
+figure(2)
+title('Orbital Position (2D Projection)');
+x=loc(1,:).*cos(loc(2,:));
+y=loc(1,:).*sin(loc(2,:));
+plot(x,y);
+figure(3)
+title('Orbital Position (J2000 Frame)')
+plot3(positionXYZ(1,:),positionXYZ(2,:),positionXYZ(3,:));
+xlim([-50000 50000]);
+ylim([-50000 50000]);
+zlim([-50000 50000]);
+figure(4)
+plot(1+t2/DAYTOSEC,imu_on)
+title('IMU Data Gathering')
+ylabel('State');
+xlabel('Time (Days)')
+figure(5)
+plot(1+t2/DAYTOSEC,in_shadow)
+title('Satellite in Shadow')
+xlabel('Time (Days)')
+ylabel('State');
 
 figure(6)
 plot(1+t2/DAYTOSEC,dataStore_state)
@@ -589,3 +615,11 @@ elseif strcmp(sim_case,'Min')
 end
 xlabel('Time (Days)','FontSize',20)
 ylabel('Energy (Watt-hours)','FontSize',20)    
+
+figure(11)
+pow_greater = find(pow_cum>batt_max);
+pow_FULLCHARGE = t2(pow_greater(1));
+hold on
+plot(1+t2/DAYTOSEC,pow_cum);
+plot(1+t2/DAYTOSEC,batt_max*ones(1,length(t2)));
+fprintf('\nTime to first full charge is %2.f minutes.\n\n',pow_FULLCHARGE/60);
