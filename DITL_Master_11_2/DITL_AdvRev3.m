@@ -34,8 +34,8 @@ clc
 
 %Set Simulation Case ('Average','Min', or 'Max')
 global sim_case
-sim_case = 'Average';
-% sim_case = 'Max';
+% sim_case = 'Average';
+sim_case = 'Max';
 % sim_case = 'Min';
 
 %Set slant range case (0 = current estimates, 1 = estimates based on
@@ -53,6 +53,7 @@ time_step=60; %in seconds
 % % Min case: 
 
 %Power Parameters
+batt_num = 3; %number of batteries at start
 batt_volt = 3.7; %Volts
 batt_amp_min = 2.52; %Amps
 batt_max = batt_volt*batt_amp_min*batt_num;%Watt-hours
@@ -89,6 +90,7 @@ spfail_modes = [1,1,1,1];
 
 %Data Parameters
     %%% X PHOTOS/ORBIT * 900 KB/PHOTO + X THUMBNAILS/ORBIT * 1 KB
+picDelta=(8)*1000*8; %bits, (8) thumbnails
 picDelta_full = (0)*900000*8;  %bits; (0) full-size photos
 cam_fmsc = (900000*8*2);  %bits, Amount of data from cameras for FMSC (2 full size images)
 pull_time=20*60; %seconds,time we are pulling data around periapsis with the IMU
@@ -486,6 +488,12 @@ for X=1:steps
         positionXYZ(:,X)=ade_pos;
 
 end
+if length(pow_cum)>length(t2)
+    pow_cum = pow_cum(1:length(t2));
+elseif length(pow_cum)<length(t2)
+    pow_cum = [pow_cum, zeros(1,length(t2)-length(pow_cum))];
+end
+    
 pow_cum = cumsum(pow_cum);
 %Outputs
 fprintf('\nOutputing data to text file\n');
@@ -536,17 +544,17 @@ xlabel('Time (Days)')
 ylabel('Energy (Watt-hours)')
 % 
 %Breakout Plots
-figure(2)
-title('Orbital Position (2D Projection)');
-x=loc(1,:).*cos(loc(2,:));
-y=loc(1,:).*sin(loc(2,:));
-plot(x,y);
-figure(3)
-title('Orbital Position (J2000 Frame)')
-plot3(positionXYZ(1,:),positionXYZ(2,:),positionXYZ(3,:));
-xlim([-50000 50000]);
-ylim([-50000 50000]);
-zlim([-50000 50000]);
+% figure(2)
+% title('Orbital Position (2D Projection)');
+% x=loc(1,:).*cos(loc(2,:));
+% y=loc(1,:).*sin(loc(2,:));
+% plot(x,y);
+% figure(3)
+% title('Orbital Position (J2000 Frame)')
+% plot3(positionXYZ(1,:),positionXYZ(2,:),positionXYZ(3,:));
+% xlim([-50000 50000]);
+% ylim([-50000 50000]);
+% zlim([-50000 50000]);
 figure(4)
 plot(1+t2/DAYTOSEC,imu_on)
 title('IMU Data Gathering')
