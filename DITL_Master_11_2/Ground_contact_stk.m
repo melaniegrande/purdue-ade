@@ -15,12 +15,35 @@ function [ conn,run ] = Ground_contact_stk( startdate,enddate )
 %which is better for you we can discuss tomorrow. thanks for understanding
 %about not meeting today
 
-Cal = csvread('CalPolycontact - Average.csv',1,0); %takes excel data calpoly
-Purdue = csvread('Purduecontact - Average.csv',1,0); %takes excel data purdue
-ASU = csvread('ASUcontact - Average.csv',1,0); %takes excel data
-Tech = csvread('GaTechcontact - Average.csv',1,0); %takes excel data
+global sim_case short_slant
+
+% Creates variables based on the global variable sim_case
+if short_slant
+    Cal = csvread(['CalPolycontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data calpoly
+    Purdue = csvread(['Purduecontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data purdue
+    ASU = csvread(['ASUcontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data
+    Tech = csvread(['GaTechcontact - ', sim_case, ' - SHORT.csv'],1,0); %takes excel data
+else
+    Cal = csvread(['CalPolycontact - ', sim_case, '.csv'],1,0); %takes excel data calpoly
+    Purdue = csvread(['Purduecontact - ', sim_case, '.csv'],1,0); %takes excel data purdue
+    ASU = csvread(['ASUcontact - ', sim_case, '.csv'],1,0); %takes excel data
+    Tech = csvread(['GaTechcontact - ', sim_case, '.csv'],1,0); %takes excel data    
+end
 julianseconds = (((1/24)/60)/60); %creates seconds in julian time
-step = julianseconds*60; % 30 second step
+step = julianseconds*60; % 60 second step
+step60 = 60; % minimum contact duration
+
+durCal = Cal(:,3);
+durPurdue = Purdue(:,3);
+durASU = ASU(:,3);
+durTech = Tech(:,3);
+
+Cal(find(durCal < step60),:) = [];
+Purdue(find(durPurdue < step60),:) = [];
+ASU(find(durASU < step60),:) = [];
+Tech(find(durTech < step60),:) = [];
+
+
 
 jd1Cal=Cal(:,1);
 jd2Cal=Cal(:,2);
@@ -30,6 +53,7 @@ jd1Tech=Tech(:,1);
 jd2Tech=Tech(:,2);
 jd1ASU=ASU(:,1);
 jd2ASU=ASU(:,2);
+
 
 
 % %%this for loop is used to make an array of julian dates of ground contact
@@ -154,14 +178,14 @@ for a = startdate:step:(enddate+step)
             conn(x) = 1; 
             Techconn(x) = 1;
             Techtouch=Techtouch+1;
-        else
-            if(Techprev)
+%         else
+%             if(Techprev)
                 Techcount=Techcount+1;
                 if(Techcount>Techlen)
                     Techflag=0;
                     fprintf('Last GeorgiaTech Contact: %f %f\n',jd2Tech(Techcount-1),Techcount-1);
                 end
-            end
+%             end
             Techprev=0;
         end
     end
@@ -187,19 +211,22 @@ for a = startdate:step:(enddate+step)
     set=1;
 end
 
+% MRT Note: We should probably add an x axis to these plots
+
 figure(12)
 subplot(4,1,1)
-plot(Calconn)
+stairs(run - run(1), Calconn)
 title('CalPoly Contacts');
 subplot(4,1,2)
-plot(Purconn)
+stairs(run - run(1), Purconn)
 title('Purdue Contacts');
 subplot(4,1,3)
-plot(Techconn)
+stairs(run - run(1), Techconn)
 title('Georgia Tech Contacts');
 subplot(4,1,4)
-plot(ASUconn)
+stairs(run - run(1), ASUconn)
 title('Arizona State Contacts');
+xlabel('Time (Days)')
 
 end
 
