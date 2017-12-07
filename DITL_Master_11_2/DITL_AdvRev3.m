@@ -34,8 +34,8 @@ clc
 
 %Set Simulation Case ('Average','Min', or 'Max')
 global sim_case
-% sim_case = 'Average';
-sim_case = 'Max';
+sim_case = 'Average';
+% sim_case = 'Max';
 % sim_case = 'Min';
 
 %Set slant range case (0 = current estimates, 1 = estimates based on
@@ -611,6 +611,7 @@ stairs(1+t2(~safe_flag_vector)/DAYTOSEC,in_tmrange(~safe_flag_vector))
 title('Transmitting')
 xlabel('Time (Days)')
 ylabel('Flag')
+
 figure(10)
 plot(1+t2/DAYTOSEC,power_state,'LineWidth',1)
 ylim([0,1.1*max(power_state)]);
